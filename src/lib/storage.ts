@@ -1,10 +1,13 @@
+import { t } from '../i18n/index.ts';
 // 本地持久化：设置、进度、代码草稿。全部存在浏览器 localStorage 里，不上传任何地方。
 
 export type RunnerKind = 'playground' | 'proxy' | 'custom';
 export type LlmProvider = 'none' | 'anthropic' | 'openai';
 export type Theme = 'system' | 'dark' | 'light';
+export type LangSetting = 'auto' | 'zh' | 'en';
 
 export interface Settings {
+  lang: LangSetting;
   theme: Theme;
   fontSize: number;
   runner: RunnerKind;
@@ -21,6 +24,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
+  lang: 'auto',
   theme: 'system',
   fontSize: 14,
   // npm run dev:local 时默认走开发服务器转发到本机 rustc
@@ -120,7 +124,7 @@ export function exportData(): string {
 
 export function importData(json: string): number {
   const parsed = JSON.parse(json) as { app?: string; data?: Record<string, string> };
-  if (parsed.app !== 'rustlab' || !parsed.data) throw new Error('不是 RustLab 导出的文件');
+  if (parsed.app !== 'rustlab' || !parsed.data) throw new Error(t('storage.badFile'));
   let n = 0;
   for (const [k, v] of Object.entries(parsed.data)) {
     if (k.startsWith('rustlab:') && k !== KEY_SETTINGS && typeof v === 'string') {

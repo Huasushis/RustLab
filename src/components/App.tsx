@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { allLevels, chapterOf, findLevel, levelNumber, neighbours, PLAYGROUND_STARTER } from '../content.ts';
+import { chapterOf, findLevel, getAllLevels, levelNumber, neighbours, playgroundStarter } from '../content.ts';
+import { detectLang, setLang, t } from '../i18n/index.ts';
 import { checkLevel, runCode, RUST_EDITION, type Outcome } from '../lib/check.ts';
 import { buildSystemPrompt, llmConfigured, type ChatMessage } from '../lib/llm.ts';
 import { applyMonacoTheme } from '../lib/monaco.ts';
@@ -49,7 +50,7 @@ function parseHash(): Route {
   if (h === 'playground') return { kind: 'playground' };
   const id = h.replace(/^level\//, '');
   if (findLevel(id)) return { kind: 'level', id };
-  return { kind: 'level', id: allLevels[0].id };
+  return { kind: 'level', id: getAllLevels()[0].id };
 }
 
 function useHashRoute(): [Route, (r: Route) => void] {
@@ -128,12 +129,15 @@ function usePersistentNumber(key: string, initial: number, min: number, max: num
 
 export function App() {
   const [settings, setSettingsState] = useState<Settings>(loadSettings);
+  // 必须在读取任何关卡数据之前确定语言
+  const lang = settings.lang === 'auto' ? detectLang() : settings.lang;
+  setLang(lang);
   const [progress, setProgress] = useState<Progress>(loadProgress);
   const [hints, setHints] = useState<Record<string, number>>(loadHints);
   const [route, go] = useHashRoute();
   const level = route.kind === 'level' ? findLevel(route.id)! : null;
   const fileKey = level ? level.id : PLAYGROUND_KEY;
-  const starter = level ? level.starter : PLAYGROUND_STARTER;
+  const starter = level ? level.starter : playgroundStarter();
 
   const [code, setCode] = useState('');
   const [cursor, setCursor] = useState({ line: 1, col: 1 });
@@ -177,22 +181,22 @@ export function App() {
     setRunError(null);
     setBottomTab('output');
     setDiffOpen(false);
-    document.title = level ? `${levelNumber(level)} ${level.title} · RustLab` : '自由练习区 · RustLab';
-  }, [fileKey]); // eslint-disable-line react-hooks/exhaustive-deps
+    document.title = `${level ? `${levelNumber(level)} ${level.title}` : t('app.playground')} · RustLab`;
+  }, [fileKey, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 自动保存（停止输入 400ms 后）
   useEffect(() => {
     if (!code) return;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       if (code === starter) clearCode(fileKey);
       else saveCode(fileKey, code);
     }, 400);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [code, fileKey, starter]);
 
   const flash = useCallback((msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast((t) => (t === msg ? null : t)), 2600);
+    setTimeout(() => setToast((cur) => (cur === msg ? null : cur)), 2600);
   }, []);
 
   const execute = useCallback(
@@ -210,7 +214,7 @@ export function App() {
         const res = kind === 'check' && level ? await checkLevel(level, src, exec) : await runCode(src, exec);
         if (ac.signal.aborted) return;
         setOutcome(res);
-        if (res.kind === 'check' && res.tests.length > 0 && !res.passed && res.tests.some((t) => t.status === 'failed')) {
+        if (res.kind === 'check' && res.tests.length > 0 && !res.passed && res.tests.some((x) => x.status === 'failed')) {
           setBottomTab('tests');
         } else {
           setBottomTab('output');
@@ -220,7 +224,7 @@ export function App() {
           setProgress(p);
           saveProgress(p);
           const ch = chapterOf(level);
-          if (ch.levels.every((l) => p[l.id])) flash(`🎉 第 ${ch.index + 1} 章「${ch.title}」全部通关！`);
+          if (ch.levels.every((l) => p[l.id])) flash(t('app.chapterComplete', { n: ch.index + 1, title: ch.title }));
         }
       } catch (err) {
         if (ac.signal.aborted) return;
@@ -243,7 +247,7 @@ export function App() {
       const src = editorRef.current?.getValue() ?? code;
       const out = await formatCode(settings, src);
       if (out !== src) editorRef.current?.setValue(out);
-      flash('已格式化（rustfmt）');
+      flash(t('app.formatted'));
     } catch (err) {
       flash(err instanceof Error ? err.message : String(err));
     } finally {
@@ -252,7 +256,7 @@ export function App() {
   }, [busy, code, flash, settings]);
 
   const resetCode = useCallback(() => {
-    if (!confirm('把代码恢复成本关的初始状态？（之后仍可以用 Ctrl+Z 撤销）')) return;
+    if (!confirm(t('app.confirmReset'))) return;
     editorRef.current?.setValue(starter);
     setOutcome(null);
   }, [starter]);
@@ -260,7 +264,7 @@ export function App() {
   const lastOutput = useMemo(() => {
     if (runError) return runError;
     if (!outcome) return '';
-    const failed = outcome.tests.filter((t) => t.status === 'failed').map((t) => `${t.name}:\n${t.detail}`);
+    const failed = outcome.tests.filter((x) => x.status === 'failed').map((x) => `${x.name}:\n${x.detail}`);
     return [outcome.summary, outcome.stderr, outcome.tests.length ? failed.join('\n\n') : outcome.stdout]
       .filter(Boolean)
       .join('\n\n');
@@ -295,6 +299,7 @@ export function App() {
     go({ kind: 'level', id });
     if (isMobile) setMobileView('lesson');
   };
+  const allLevels = getAllLevels();
   const completedCount = allLevels.filter((l) => progress[l.id]).length;
   const aiReady = llmConfigured(settings);
 
@@ -320,38 +325,38 @@ export function App() {
     <div className="editor-toolbar">
       <div className="file-tab active">
         <IconCode /> main.rs
-        {code !== starter && <span className="dot" title="已修改（自动保存在浏览器中）" />}
+        {code !== starter && <span className="dot" title={t('toolbar.modified')} />}
       </div>
       <div className="toolbar-spacer" />
-      <button className="btn small ghost" title="恢复初始代码" onClick={resetCode}>
+      <button className="btn small ghost" title={t('toolbar.resetTitle')} onClick={resetCode}>
         <IconReset />
-        <span className="label">重置</span>
+        <span className="label">{t('toolbar.reset')}</span>
       </button>
-      <button className="btn small ghost" title="用 rustfmt 格式化（Shift+Alt+F）" onClick={() => void format()}>
+      <button className="btn small ghost" title={t('toolbar.formatTitle')} onClick={() => void format()}>
         <IconFormat />
-        <span className="label">格式化</span>
+        <span className="label">{t('toolbar.format')}</span>
       </button>
-      <a className="btn small ghost" href={playgroundLink(code)} target="_blank" rel="noreferrer" title="在官方 Playground 中打开">
+      <a className="btn small ghost" href={playgroundLink(code)} target="_blank" rel="noreferrer" title={t('toolbar.openPlayground')}>
         <IconExternal />
       </a>
       <button
         className="btn small"
         onClick={() => void execute('run')}
         disabled={busy === 'run' || busy === 'check'}
-        title="运行（Ctrl/⌘ + Enter）"
+        title={t('toolbar.runTitle')}
       >
         <IconPlay />
-        <span className="btn-text">运行</span>
+        <span className="btn-text">{t('toolbar.run')}</span>
       </button>
       {level && (
         <button
           className="btn small primary"
           onClick={() => void execute('check')}
           disabled={busy === 'run' || busy === 'check'}
-          title="检查（Ctrl/⌘ + Shift + Enter）"
+          title={t('toolbar.checkTitle')}
         >
           <IconCheck />
-          <span className="btn-text">检查</span>
+          <span className="btn-text">{t('toolbar.check')}</span>
         </button>
       )}
     </div>
@@ -360,7 +365,7 @@ export function App() {
   const editor = (
     <CodeEditor
       ref={editorRef}
-      fileKey={fileKey}
+      fileKey={`${lang}:${fileKey}`}
       initialValue={loadCode(fileKey) ?? starter}
       diagnostics={outcome?.diagnostics ?? []}
       fontSize={settings.fontSize}
@@ -383,7 +388,7 @@ export function App() {
         if (isMobile) setMobileView('code');
         editorRef.current?.reveal(l, c);
       }}
-      onAskAi={() => openChat('帮我看看这次为什么没通过，先解释问题出在哪里，别直接给出完整答案。')}
+      onAskAi={() => openChat(t('app.askAiPrompt'))}
       onNext={next ? () => navigate(next.id) : null}
     />
   );
@@ -400,7 +405,9 @@ export function App() {
         if (isMobile) setMobileView('menu');
         setSide('settings');
       }}
-      contextLabel={level ? `${levelNumber(level)} ${level.title} + 你的代码 + 最近的输出` : '自由练习区的代码'}
+      contextLabel={
+        level ? t('app.chatContextLevel', { level: `${levelNumber(level)} ${level.title}` }) : t('app.chatContextPlayground')
+      }
     />
   );
 
@@ -437,17 +444,17 @@ export function App() {
   const diffModal =
     diffOpen && level ? (
       <div className="modal-backdrop" onClick={() => setDiffOpen(false)}>
-        <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="对比参考答案">
+        <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t('diff.title')}>
           <div className="modal-head">
             <div>
-              <strong>对比参考答案</strong>
-              <span className="muted">　左：你的代码　右：参考答案</span>
+              <strong>{t('diff.title')}</strong>
+              <span className="muted">　{t('diff.legend')}</span>
             </div>
-            <button className="icon-btn" onClick={() => setDiffOpen(false)} title="关闭">
+            <button className="icon-btn" onClick={() => setDiffOpen(false)} title={t('app.close')}>
               <IconX />
             </button>
           </div>
-          <p className="modal-note">参考答案只是其中一种写法。先自己试试，实在卡住了再看——看完之后最好关掉它，自己重新写一遍。</p>
+          <p className="modal-note">{t('diff.note')}</p>
           <DiffView original={editorRef.current?.getValue() ?? code} modified={level.solution} fontSize={settings.fontSize} />
           <div className="modal-foot">
             <button
@@ -455,13 +462,13 @@ export function App() {
               onClick={() => {
                 editorRef.current?.setValue(level.solution);
                 setDiffOpen(false);
-                flash('已替换为参考答案（Ctrl+Z 可撤销）');
+                flash(t('diff.replaced'));
               }}
             >
-              用参考答案替换我的代码
+              {t('diff.replace')}
             </button>
             <button className="btn primary" onClick={() => setDiffOpen(false)}>
-              我自己再试试
+              {t('diff.tryAgain')}
             </button>
           </div>
         </div>
@@ -473,17 +480,17 @@ export function App() {
   // ---------- 手机布局 ----------
   if (isMobile) {
     const views: [MobileView, string, ReactNode][] = [
-      ['lesson', '讲解', <IconBook key="b" />],
-      ['code', '代码', <IconCode key="c" />],
-      ['chat', '助教', <IconChat key="h" />],
-      ['menu', '菜单', <IconFiles key="m" />],
+      ['lesson', t('mobile.lesson'), <IconBook key="b" />],
+      ['code', t('mobile.code'), <IconCode key="c" />],
+      ['chat', t('mobile.chat'), <IconChat key="h" />],
+      ['menu', t('mobile.menu'), <IconFiles key="m" />],
     ];
     return (
       <div className="app mobile">
         <header className="titlebar">
           <Ferris size={20} />
           <span className="brand">RustLab</span>
-          <span className="title-crumb">{level ? `${levelNumber(level)} ${level.title}` : '自由练习区'}</span>
+          <span className="title-crumb">{level ? `${levelNumber(level)} ${level.title}` : t('app.playground')}</span>
         </header>
         <main className="mobile-main">
           <div className={`mobile-pane scroll ${mobileView === 'lesson' ? '' : 'hidden'}`}>{lesson}</div>
@@ -496,10 +503,10 @@ export function App() {
           <div className={`mobile-pane scroll ${mobileView === 'menu' ? '' : 'hidden'}`}>
             <div className="mobile-menu-tabs">
               <button aria-pressed={side !== 'settings'} onClick={() => setSide('levels')}>
-                关卡
+                {t('app.levels')}
               </button>
               <button aria-pressed={side === 'settings'} onClick={() => setSide('settings')}>
-                设置
+                {t('app.settings')}
               </button>
             </div>
             {side === 'settings' ? settingsPanel : explorer}
@@ -531,11 +538,11 @@ export function App() {
               {chapterOf(level).title} <span className="sep">›</span> {levelNumber(level)} {level.title}
             </>
           ) : (
-            '自由练习区'
+            t('app.playground')
           )}
         </span>
         <div className="toolbar-spacer" />
-        <div className="title-progress" title={`已通关 ${completedCount}/${allLevels.length}`}>
+        <div className="title-progress" title={t('app.progressTitle', { done: completedCount, total: allLevels.length })}>
           <div className="bar">
             <div style={{ width: `${(completedCount / allLevels.length) * 100}%` }} />
           </div>
@@ -544,7 +551,7 @@ export function App() {
           </span>
         </div>
         <button className={`btn small ${chatOpen ? 'primary' : 'ghost'}`} onClick={() => (chatOpen ? setChatOpen(false) : openChat())}>
-          <IconChat /> AI 助教
+          <IconChat /> {t('app.aiTutor')}
         </button>
       </header>
 
@@ -552,18 +559,18 @@ export function App() {
         <nav className="activitybar">
           <button
             aria-pressed={side === 'levels'}
-            title="关卡"
+            title={t('app.levels')}
             onClick={() => setSide((s) => (s === 'levels' ? null : 'levels'))}
           >
             <IconFiles />
           </button>
-          <button aria-pressed={chatOpen} title="AI 助教" onClick={() => (chatOpen ? setChatOpen(false) : openChat())}>
+          <button aria-pressed={chatOpen} title={t('app.aiTutor')} onClick={() => (chatOpen ? setChatOpen(false) : openChat())}>
             <IconChat />
           </button>
           <div className="toolbar-spacer" />
           <button
             aria-pressed={side === 'settings'}
-            title="设置"
+            title={t('app.settings')}
             onClick={() => setSide((s) => (s === 'settings' ? null : 'settings'))}
           >
             <IconGear />
@@ -611,13 +618,11 @@ export function App() {
         <div className="toolbar-spacer" />
         {busy && (
           <span>
-            <span className="spinner small" /> {busy === 'format' ? '格式化中' : '编译中'}
+            <span className="spinner small" /> {t(busy === 'format' ? 'app.statusFormatting' : 'app.statusCompiling')}
           </span>
         )}
-        <span>
-          行 {cursor.line}，列 {cursor.col}
-        </span>
-        <span>{aiReady ? `AI：${settings.llm.model}` : 'AI 助教未配置'}</span>
+        <span>{t('app.statusCursor', { line: cursor.line, col: cursor.col })}</span>
+        <span>{aiReady ? t('app.statusAi', { model: settings.llm.model }) : t('app.statusAiOff')}</span>
       </footer>
       {diffModal}
       {toastEl}

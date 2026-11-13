@@ -1,0 +1,212 @@
+// 简体中文界面文字（基准语言：其它语言的字典必须包含这里的全部键）
+export const zh = {
+  // 通用
+  'app.playground': '自由练习区',
+  'app.sandbox': '沙盒',
+  'app.levels': '关卡',
+  'app.settings': '设置',
+  'app.aiTutor': 'AI 助教',
+  'app.close': '关闭',
+  'app.chapterComplete': '🎉 第 {n} 章「{title}」全部通关！',
+  'app.progressTitle': '已通关 {done}/{total}',
+  'app.statusCompiling': '编译中',
+  'app.statusFormatting': '格式化中',
+  'app.statusCursor': '行 {line}，列 {col}',
+  'app.statusAi': 'AI：{model}',
+  'app.statusAiOff': 'AI 助教未配置',
+  'app.formatted': '已格式化（rustfmt）',
+  'app.confirmReset': '把代码恢复成本关的初始状态？（之后仍可以用 Ctrl+Z 撤销）',
+  'app.askAiPrompt': '帮我看看这次为什么没通过，先解释问题出在哪里，别直接给出完整答案。',
+  'app.chatContextLevel': '{level} + 你的代码 + 最近的输出',
+  'app.chatContextPlayground': '自由练习区的代码',
+
+  // 移动端
+  'mobile.lesson': '讲解',
+  'mobile.code': '代码',
+  'mobile.chat': '助教',
+  'mobile.menu': '菜单',
+
+  // 编辑器工具栏
+  'toolbar.modified': '已修改（自动保存在浏览器中）',
+  'toolbar.reset': '重置',
+  'toolbar.resetTitle': '恢复初始代码',
+  'toolbar.format': '格式化',
+  'toolbar.formatTitle': '用 rustfmt 格式化（Shift+Alt+F）',
+  'toolbar.openPlayground': '在官方 Playground 中打开',
+  'toolbar.run': '运行',
+  'toolbar.runTitle': '运行（Ctrl/⌘ + Enter）',
+  'toolbar.check': '检查',
+  'toolbar.checkTitle': '检查（Ctrl/⌘ + Shift + Enter）',
+
+  // 参考答案对比
+  'diff.title': '对比参考答案',
+  'diff.legend': '左：你的代码　右：参考答案',
+  'diff.note': '参考答案只是其中一种写法。先自己试试，实在卡住了再看——看完之后最好关掉它，自己重新写一遍。',
+  'diff.replace': '用参考答案替换我的代码',
+  'diff.replaced': '已替换为参考答案（Ctrl+Z 可撤销）',
+  'diff.tryAgain': '我自己再试试',
+
+  // 关卡导航
+  'explorer.title': '关卡',
+
+  // 讲解
+  'lesson.chapter': '第 {n} 章 · {title}',
+  'lesson.modeTest': '测试判题',
+  'lesson.modeExpect': '比对输出',
+  'lesson.modeRun': '编译运行',
+  'lesson.forbid': '禁用：{list}',
+  'lesson.forbidTitle': '判题时会检查代码中是否出现这些写法（注释除外）',
+  'lesson.minTests': '至少写 {n} 个测试',
+  'lesson.crates': '第三方库：{list}',
+  'lesson.passed': '已通过',
+  'lesson.hint': '提示 {n}',
+  'lesson.firstHint': '给我一点提示',
+  'lesson.moreHint': '再来一条提示',
+  'lesson.compare': '对比参考答案',
+  'lesson.untranslated': '这一关还没有当前语言的译文，下面显示的是中文原文。',
+  'playground.intro': `这里没有任务也没有判题，想试什么就写什么。代码会自动保存在浏览器里。
+
+- **Ctrl/⌘ + Enter**：运行
+- **Shift + Alt + F** 或 **Ctrl/⌘ + S**：用 rustfmt 格式化
+- 可以直接 \`use\` 常用的第三方库：rand、serde、serde_json、regex、anyhow、thiserror、itertools、clap、chrono。选择官方 Playground 作为运行环境时，还能用下载量最高的几百个库
+
+想要更完整的开发体验（rust-analyzer 补全、调试器、cargo）？看看项目 README 里的「本地 / 容器 / Codespaces」一节，同样的关卡可以导出成 cargo 项目，在真正的 VS Code 里做。`,
+
+  // 输出面板
+  'output.tabOutput': '输出',
+  'output.tabProblems': '问题',
+  'output.tabTests': '测试',
+  'output.running': '正在编译运行…',
+  'output.checking': '正在编译并判题…',
+  'output.firstCompile': '（首次编译通常需要几秒）',
+  'output.passed': '通过！{summary}',
+  'output.next': '下一关 →',
+  'output.askAi': '问问 AI 助教',
+  'output.noProblems': '没有发现问题',
+  'output.error': '错误',
+  'output.warning': '警告',
+  'output.notTestLevel': '这一关不是用测试判题的',
+  'output.clickCheck': '点「检查」运行测试',
+  'output.empty': 'Ctrl/⌘ + Enter 运行，Ctrl/⌘ + Shift + Enter 检查',
+  'output.noOutput': '（程序没有任何输出）',
+  'output.yours': '你的输出',
+  'output.expected': '期望的输出',
+  'output.emptyValue': '（空）',
+
+  // AI 助教
+  'chat.clear': '清空对话',
+  'chat.context': '上下文：{label}',
+  'chat.thinking': '思考中…',
+  'chat.placeholder': '问点什么…（Enter 发送，Shift+Enter 换行）',
+  'chat.send': '发送',
+  'chat.stop': '停止',
+  'chat.setupLead': 'AI 助教是<strong>可选</strong>功能：填入你自己的 API Key 后，它能看到当前关卡和你的代码，帮你解释编译错误、给出思路。',
+  'chat.setupNote':
+    '支持 Claude，以及 DeepSeek、通义千问、智谱、Kimi、OpenRouter、Gemini、本地 Ollama 等任何 OpenAI 兼容接口。Key 只保存在你的浏览器里，请求直接从浏览器发给模型服务商。',
+  'chat.goSettings': '去设置',
+  'chat.quick1': '我卡住了，给我一点思路（先别给完整答案）',
+  'chat.quick2': '帮我解释一下最近这次的报错',
+  'chat.quick3': '我的代码哪里可以写得更地道？',
+  'chat.quick4': '这一关的知识点，用 C++ / Python 类比讲一下',
+
+  // 设置
+  'settings.appearance': '外观',
+  'settings.language': '语言 / Language',
+  'settings.languageAuto': '跟随浏览器',
+  'settings.theme': '主题',
+  'settings.themeSystem': '跟随系统',
+  'settings.themeDark': '深色',
+  'settings.themeLight': '浅色',
+  'settings.fontSize': '编辑器字号',
+  'settings.runner': '运行环境',
+  'settings.runnerHelp': '代码在哪里编译运行。三种方式的效果完全一样，选一个能用的就行。',
+  'settings.runnerPlayground': '官方 Playground',
+  'settings.runnerPlaygroundDesc': '默认。由 Rust 官方提供的免费在线编译服务，零配置，预装了数百个常用库。',
+  'settings.runnerProxy': '经本站转发',
+  'settings.runnerProxyDesc':
+    '部署在 Cloudflare Pages 上时转发到官方 Playground，适合官方地址访问不畅的情况；本地 npm run dev:local 时转发到本机 rustc。',
+  'settings.runnerCustom': '自定义运行器',
+  'settings.runnerCustomDesc': '用你自己机器 / 容器里的 rustc：npm run runner 或 Docker 启动，见 README。',
+  'settings.runnerUrl': '运行器地址',
+  'settings.testRunner': '测试运行环境',
+  'settings.testing': '正在测试…',
+  'settings.ai': 'AI 助教（可选）',
+  'settings.aiHelp':
+    '填写你自己的 API Key。Key 只保存在本浏览器的 localStorage 中，请求从浏览器直接发往你选择的服务商；勾选「通过本站代理」时会经过本站的 Cloudflare 函数转发（不记录、不保存）。',
+  'settings.provider': '服务商',
+  'settings.providerNone': '不使用',
+  'settings.providerCustom': '其它 OpenAI 兼容接口…',
+  'settings.apiType': '接口类型',
+  'settings.apiOpenAI': 'OpenAI 兼容（/chat/completions）',
+  'settings.apiAnthropic': 'Anthropic Messages API',
+  'settings.customHelp': '填写任何 OpenAI 格式的接口地址，例如自建的 one-api / new-api / LiteLLM 网关或各种中转服务。Base URL 一般以 /v1 结尾，请求会发到 Base URL + /chat/completions。',
+  'settings.fetchModels': '获取模型列表',
+  'settings.fetchingModels': '正在获取模型列表…',
+  'settings.modelsFound': '找到 {n} 个模型，点选或直接输入',
+  'settings.model': '模型',
+  'settings.show': '显示',
+  'settings.hide': '隐藏',
+  'settings.useProxy': '通过本站代理（服务商不支持浏览器跨域访问时勾选）',
+  'settings.testLlm': '测试连接',
+  'settings.testLlmBusy': '正在发送测试消息…',
+  'settings.testLlmPrompt': '只回复两个字：你好',
+  'settings.testLlmOk': '✓ 连接成功，模型回复：{reply}',
+  'settings.data': '学习数据',
+  'settings.dataHelp': '进度和代码都保存在本浏览器里。换设备前可以先导出。',
+  'settings.export': '导出进度',
+  'settings.import': '导入进度',
+  'settings.reset': '清空进度',
+  'settings.confirmReset': '确定清空所有关卡的进度和代码吗？此操作无法撤销。',
+  'settings.imported': '已导入 {n} 项数据，页面将刷新。',
+  'settings.importFailed': '导入失败：{error}',
+  'settings.about': '关于',
+  'settings.aboutText':
+    'RustLab 的关卡参考了 <a href="https://github.com/rust-lang/rustlings">rustlings</a>、<a href="https://doc.rust-lang.org/book/">The Rust Programming Language</a> 与 <a href="https://course.rs/">Rust 语言圣经</a> 的章节编排，内容为原创。',
+
+  // 运行环境
+  'runner.labelPlayground': '官方 Playground',
+  'runner.labelProxy': 'Playground（本站转发）',
+  'runner.labelDevProxy': '经开发服务器转发',
+  'runner.labelCustom': '自定义运行器 {url}',
+  'runner.unreachable': '无法连接到运行环境（{url}）。请检查网络，或在「设置」里换一种运行环境。',
+  'runner.tooMany': '运行环境请求过于频繁，请稍等几秒再试。',
+  'runner.httpError': '运行环境返回错误 HTTP {status}',
+  'runner.formatFailed': '格式化失败：代码里可能有语法错误',
+  'runner.customDown': '连接不上 {url}。确认运行器已经启动（npm run runner），且允许了当前页面的来源。',
+  'runner.noRustc': '运行器在线，但它的机器上没有找到 rustc',
+  'runner.unexpected': '运行环境返回了意外的结果',
+  'runner.ok': '可用',
+
+  // AI
+  'llm.notConfigured': '还没有配置 AI 助教，请先到「设置」里填写。',
+  'llm.corsFailed':
+    '请求没有发出去：可能是网络问题，也可能是这家服务商不允许浏览器跨域访问。可以在「设置」里勾选「通过本站代理」（需要部署在 Cloudflare Pages 上）。',
+  'llm.serviceError': '模型服务返回了错误',
+  'llm.refusal': '模型拒绝回答了这个请求，换个问法试试。',
+  'llm.truncated': '（回答达到长度上限，被截断了）',
+  'llm.authError': 'API Key 无效，请到「设置」里检查。',
+  'llm.permissionError': '这个 API Key 没有调用该模型的权限。',
+  'llm.notFound': '找不到这个模型，请检查模型名。',
+  'llm.rateLimit': '请求太频繁或额度不足，请稍后再试。',
+  'llm.connection': '连接不上模型服务，请检查网络或 Base URL；也可以试试「通过本站代理」。',
+  'llm.apiError': '模型服务返回错误：{message}',
+
+  // 判题
+  'check.runDone': '运行完成',
+  'check.panic': '程序 panic 了',
+  'check.compileFailed': '编译失败',
+  'check.compileFailedHint': '编译失败，先看看编译器的报错',
+  'check.forbidden': '本关的限制：不能使用 {f}，换个思路试试',
+  'check.testsFailed': '{total} 个测试中有 {failed} 个未通过',
+  'check.needOwnTests': '本关要求你自己写至少 {need} 个通过的测试，目前只有 {own} 个',
+  'check.noTests': '没有运行任何测试',
+  'check.testCrash': '测试进程异常退出',
+  'check.allTestsPassed': '全部 {n} 个测试通过',
+  'check.wrongOutput': '程序能运行，但输出和期望的不一样',
+  'check.outputOk': '编译通过，输出正确',
+
+  // 存储
+  'storage.badFile': '不是 RustLab 导出的文件',
+} as const;
+
+export type Messages = { [K in keyof typeof zh]: string };

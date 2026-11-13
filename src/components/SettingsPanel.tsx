@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
-import { describeLlmError, PRESETS, streamChat } from '../lib/llm.ts';
+import { getLang, LANGS, t } from '../i18n/index.ts';
+import { describeLlmError, listModels, PRESETS, streamChat } from '../lib/llm.ts';
 import { probeRunner } from '../lib/runners.ts';
-import { exportData, importData, type RunnerKind, type Settings, type Theme } from '../lib/storage.ts';
+import { exportData, importData, type LangSetting, type RunnerKind, type Settings, type Theme } from '../lib/storage.ts';
 
 interface Props {
   settings: Settings;
@@ -23,15 +24,19 @@ function StatusLine({ s }: { s: Status }) {
 export function SettingsPanel({ settings, onChange, onResetProgress }: Props) {
   const [runnerStatus, setRunnerStatus] = useState<Status>({ kind: 'idle' });
   const [llmStatus, setLlmStatus] = useState<Status>({ kind: 'idle' });
+  const [models, setModels] = useState<string[]>([]);
   const [showKey, setShowKey] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const lang = getLang();
   const llm = settings.llm;
   const set = (patch: Partial<Settings>) => onChange({ ...settings, ...patch });
   const setLlm = (patch: Partial<Settings['llm']>) => onChange({ ...settings, llm: { ...llm, ...patch } });
   const preset = PRESETS.find((p) => p.baseUrl === llm.baseUrl && p.provider === llm.provider);
+  const endpoint =
+    llm.baseUrl.trim().replace(/\/+$/, '') + (llm.provider === 'anthropic' ? '/v1/messages' : '/chat/completions');
 
   async function testRunner() {
-    setRunnerStatus({ kind: 'busy', text: '正在测试…' });
+    setRunnerStatus({ kind: 'busy', text: t('settings.testing') });
     try {
       setRunnerStatus({ kind: 'ok', text: `✓ ${await probeRunner(settings)}` });
     } catch (err) {
@@ -40,17 +45,28 @@ export function SettingsPanel({ settings, onChange, onResetProgress }: Props) {
   }
 
   async function testLlm() {
-    setLlmStatus({ kind: 'busy', text: '正在发送测试消息…' });
+    setLlmStatus({ kind: 'busy', text: t('settings.testLlmBusy') });
     let reply = '';
     try {
       const ac = new AbortController();
       const timer = setTimeout(() => ac.abort(), 60_000);
-      await streamChat(settings, '你是一个测试助手。', [{ role: 'user', content: '只回复两个字：你好' }], {
+      await streamChat(settings, 'You are a connectivity test.', [{ role: 'user', content: t('settings.testLlmPrompt') }], {
         signal: ac.signal,
         onText: (d) => (reply += d),
       });
       clearTimeout(timer);
-      setLlmStatus({ kind: 'ok', text: `✓ 连接成功，模型回复：${reply.trim().slice(0, 40) || '（空）'}` });
+      setLlmStatus({ kind: 'ok', text: t('settings.testLlmOk', { reply: reply.trim().slice(0, 40) || '—' }) });
+    } catch (err) {
+      setLlmStatus({ kind: 'err', text: describeLlmError(err) });
+    }
+  }
+
+  async function fetchModels() {
+    setLlmStatus({ kind: 'busy', text: t('settings.fetchingModels') });
+    try {
+      const list = await listModels(settings);
+      setModels(list);
+      setLlmStatus({ kind: 'ok', text: t('settings.modelsFound', { n: list.length }) });
     } catch (err) {
       setLlmStatus({ kind: 'err', text: describeLlmError(err) });
     }
@@ -59,21 +75,32 @@ export function SettingsPanel({ settings, onChange, onResetProgress }: Props) {
   return (
     <div className="settings">
       <div className="panel-header">
-        <span>设置</span>
+        <span>{t('app.settings')}</span>
       </div>
       <div className="settings-body">
         <section>
-          <h3>外观</h3>
+          <h3>{t('settings.appearance')}</h3>
           <label className="field">
-            <span>主题</span>
-            <select value={settings.theme} onChange={(e) => set({ theme: e.target.value as Theme })}>
-              <option value="system">跟随系统</option>
-              <option value="dark">深色</option>
-              <option value="light">浅色</option>
+            <span>{t('settings.language')}</span>
+            <select value={settings.lang} onChange={(e) => set({ lang: e.target.value as LangSetting })}>
+              <option value="auto">{t('settings.languageAuto')}</option>
+              {LANGS.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.label}
+                </option>
+              ))}
             </select>
           </label>
           <label className="field">
-            <span>编辑器字号</span>
+            <span>{t('settings.theme')}</span>
+            <select value={settings.theme} onChange={(e) => set({ theme: e.target.value as Theme })}>
+              <option value="system">{t('settings.themeSystem')}</option>
+              <option value="dark">{t('settings.themeDark')}</option>
+              <option value="light">{t('settings.themeLight')}</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>{t('settings.fontSize')}</span>
             <input
               type="number"
               min={10}
@@ -85,19 +112,15 @@ export function SettingsPanel({ settings, onChange, onResetProgress }: Props) {
         </section>
 
         <section>
-          <h3>运行环境</h3>
-          <p className="help">代码在哪里编译运行。三种方式的效果完全一样，选一个能用的就行。</p>
+          <h3>{t('settings.runner')}</h3>
+          <p className="help">{t('settings.runnerHelp')}</p>
           <div className="radio-list">
             {(
               [
-                ['playground', '官方 Playground', '默认。由 Rust 官方提供的免费在线编译服务，零配置。'],
-                [
-                  'proxy',
-                  '经本站转发',
-                  '部署在 Cloudflare Pages 上时转发到官方 Playground，适合官方地址访问不畅的情况；本地 npm run dev:local 时转发到本机 rustc。',
-                ],
-                ['custom', '自定义运行器', '用你自己机器 / 容器里的 rustc：npm run runner 或 Docker 启动，见 README。'],
-              ] as [RunnerKind, string, string][]
+                ['playground', 'settings.runnerPlayground', 'settings.runnerPlaygroundDesc'],
+                ['proxy', 'settings.runnerProxy', 'settings.runnerProxyDesc'],
+                ['custom', 'settings.runnerCustom', 'settings.runnerCustomDesc'],
+              ] as const
             ).map(([value, label, desc]) => (
               <label key={value} className={`radio ${settings.runner === value ? 'checked' : ''}`}>
                 <input
@@ -105,20 +128,20 @@ export function SettingsPanel({ settings, onChange, onResetProgress }: Props) {
                   name="runner"
                   checked={settings.runner === value}
                   onChange={() => {
-                    set({ runner: value });
+                    set({ runner: value as RunnerKind });
                     setRunnerStatus({ kind: 'idle' });
                   }}
                 />
                 <div>
-                  <div>{label}</div>
-                  <div className="help">{desc}</div>
+                  <div>{t(label)}</div>
+                  <div className="help">{t(desc)}</div>
                 </div>
               </label>
             ))}
           </div>
           {settings.runner === 'custom' && (
             <label className="field">
-              <span>运行器地址</span>
+              <span>{t('settings.runnerUrl')}</span>
               <input
                 value={settings.runnerUrl}
                 placeholder="http://127.0.0.1:7878"
@@ -127,62 +150,65 @@ export function SettingsPanel({ settings, onChange, onResetProgress }: Props) {
             </label>
           )}
           <button className="btn" onClick={() => void testRunner()}>
-            测试运行环境
+            {t('settings.testRunner')}
           </button>
           <StatusLine s={runnerStatus} />
         </section>
 
         <section>
-          <h3>AI 助教（可选）</h3>
-          <p className="help">
-            填写你自己的 API Key。Key 只保存在本浏览器的 localStorage 中，请求从浏览器直接发往你选择的服务商；
-            勾选「通过本站代理」时会经过本站的 Cloudflare 函数转发（不记录、不保存）。
-          </p>
+          <h3>{t('settings.ai')}</h3>
+          <p className="help">{t('settings.aiHelp')}</p>
           <label className="field">
-            <span>服务商</span>
+            <span>{t('settings.provider')}</span>
             <select
               value={llm.provider === 'none' ? 'none' : (preset?.id ?? 'custom')}
               onChange={(e) => {
                 const v = e.target.value;
+                setModels([]);
+                setLlmStatus({ kind: 'idle' });
                 if (v === 'none') return setLlm({ provider: 'none' });
                 if (v === 'custom') return setLlm({ provider: 'openai', baseUrl: '', model: '' });
                 const p = PRESETS.find((x) => x.id === v)!;
                 setLlm({ provider: p.provider, baseUrl: p.baseUrl, model: p.model });
-                setLlmStatus({ kind: 'idle' });
               }}
             >
-              <option value="none">不使用</option>
+              <option value="none">{t('settings.providerNone')}</option>
               {PRESETS.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.label}
+                  {p.label[lang]}
                 </option>
               ))}
-              <option value="custom">其它 OpenAI 兼容接口…</option>
+              <option value="custom">{t('settings.providerCustom')}</option>
             </select>
           </label>
-          {preset?.note && <p className="help">{preset.note}</p>}
+          {preset?.note && <p className="help">{preset.note[lang]}</p>}
           {llm.provider !== 'none' && (
             <>
               {!preset && (
-                <label className="field">
-                  <span>接口类型</span>
-                  <select
-                    value={llm.provider}
-                    onChange={(e) => setLlm({ provider: e.target.value as 'anthropic' | 'openai' })}
-                  >
-                    <option value="openai">OpenAI 兼容（/chat/completions）</option>
-                    <option value="anthropic">Anthropic Messages API</option>
-                  </select>
-                </label>
+                <>
+                  <p className="help">{t('settings.customHelp')}</p>
+                  <label className="field">
+                    <span>{t('settings.apiType')}</span>
+                    <select
+                      value={llm.provider}
+                      onChange={(e) => setLlm({ provider: e.target.value as 'anthropic' | 'openai' })}
+                    >
+                      <option value="openai">{t('settings.apiOpenAI')}</option>
+                      <option value="anthropic">{t('settings.apiAnthropic')}</option>
+                    </select>
+                  </label>
+                </>
               )}
               <label className="field">
                 <span>Base URL</span>
-                <input value={llm.baseUrl} onChange={(e) => setLlm({ baseUrl: e.target.value.trim() })} />
+                <input
+                  value={llm.baseUrl}
+                  placeholder={llm.provider === 'anthropic' ? 'https://api.anthropic.com' : 'https://your-gateway.example.com/v1'}
+                  spellCheck={false}
+                  onChange={(e) => setLlm({ baseUrl: e.target.value.trim() })}
+                />
               </label>
-              <label className="field">
-                <span>模型</span>
-                <input value={llm.model} onChange={(e) => setLlm({ model: e.target.value })} />
-              </label>
+              {llm.baseUrl.trim() && <p className="help mono">→ POST {endpoint}</p>}
               <label className="field">
                 <span>API Key</span>
                 <div className="key-row">
@@ -195,16 +221,44 @@ export function SettingsPanel({ settings, onChange, onResetProgress }: Props) {
                     onChange={(e) => setLlm({ apiKey: e.target.value })}
                   />
                   <button className="btn small ghost" type="button" onClick={() => setShowKey((v) => !v)}>
-                    {showKey ? '隐藏' : '显示'}
+                    {t(showKey ? 'settings.hide' : 'settings.show')}
                   </button>
                 </div>
               </label>
+              <label className="field">
+                <span>{t('settings.model')}</span>
+                <div className="key-row">
+                  <input
+                    value={llm.model}
+                    list="rustlab-models"
+                    spellCheck={false}
+                    onChange={(e) => setLlm({ model: e.target.value })}
+                  />
+                  <button className="btn small ghost" type="button" onClick={() => void fetchModels()}>
+                    {t('settings.fetchModels')}
+                  </button>
+                </div>
+                <datalist id="rustlab-models">
+                  {models.map((m) => (
+                    <option key={m} value={m} />
+                  ))}
+                </datalist>
+              </label>
+              {models.length > 0 && (
+                <select className="model-list" size={Math.min(6, models.length)} value={llm.model} onChange={(e) => setLlm({ model: e.target.value })}>
+                  {models.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              )}
               <label className="check">
                 <input type="checkbox" checked={llm.useProxy} onChange={(e) => setLlm({ useProxy: e.target.checked })} />
-                <span>通过本站代理（服务商不支持浏览器跨域访问时勾选）</span>
+                <span>{t('settings.useProxy')}</span>
               </label>
               <button className="btn" onClick={() => void testLlm()}>
-                测试连接
+                {t('settings.testLlm')}
               </button>
               <StatusLine s={llmStatus} />
             </>
@@ -212,8 +266,8 @@ export function SettingsPanel({ settings, onChange, onResetProgress }: Props) {
         </section>
 
         <section>
-          <h3>学习数据</h3>
-          <p className="help">进度和代码都保存在本浏览器里。换设备前可以先导出。</p>
+          <h3>{t('settings.data')}</h3>
+          <p className="help">{t('settings.dataHelp')}</p>
           <div className="btn-row">
             <button
               className="btn"
@@ -226,18 +280,18 @@ export function SettingsPanel({ settings, onChange, onResetProgress }: Props) {
                 URL.revokeObjectURL(a.href);
               }}
             >
-              导出进度
+              {t('settings.export')}
             </button>
             <button className="btn" onClick={() => fileInput.current?.click()}>
-              导入进度
+              {t('settings.import')}
             </button>
             <button
               className="btn danger"
               onClick={() => {
-                if (confirm('确定清空所有关卡的进度和代码吗？此操作无法撤销。')) onResetProgress();
+                if (confirm(t('settings.confirmReset'))) onResetProgress();
               }}
             >
-              清空进度
+              {t('settings.reset')}
             </button>
           </div>
           <input
@@ -251,22 +305,18 @@ export function SettingsPanel({ settings, onChange, onResetProgress }: Props) {
               if (!f) return;
               try {
                 const n = importData(await f.text());
-                alert(`已导入 ${n} 项数据，页面将刷新。`);
+                alert(t('settings.imported', { n }));
                 location.reload();
               } catch (err) {
-                alert(`导入失败：${err instanceof Error ? err.message : err}`);
+                alert(t('settings.importFailed', { error: err instanceof Error ? err.message : String(err) }));
               }
             }}
           />
         </section>
 
         <section className="about">
-          <h3>关于</h3>
-          <p className="help">
-            RustLab 的关卡参考了 <a href="https://github.com/rust-lang/rustlings">rustlings</a>、
-            <a href="https://doc.rust-lang.org/book/">The Rust Programming Language</a> 与
-            <a href="https://course.rs/">Rust 语言圣经</a> 的章节编排，内容为原创。
-          </p>
+          <h3>{t('settings.about')}</h3>
+          <p className="help" dangerouslySetInnerHTML={{ __html: t('settings.aboutText') }} />
         </section>
       </div>
     </div>

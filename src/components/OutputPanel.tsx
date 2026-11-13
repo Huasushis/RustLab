@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.ts';
 import type { Outcome } from '../lib/check.ts';
 import { IconCircleCheck, IconSparkle, IconTerminal, IconWarning, IconX } from './Icons.tsx';
 
@@ -24,13 +25,14 @@ export function OutputPanel({ tab, onTab, busy, outcome, error, onReveal, onAskA
     <div className="output-panel">
       <div className="panel-tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'output'} onClick={() => onTab('output')}>
-          输出
+          {t('output.tabOutput')}
         </button>
         <button role="tab" aria-selected={tab === 'problems'} onClick={() => onTab('problems')}>
-          问题{problems.length > 0 && <span className={`badge ${errors ? 'err' : 'warn'}`}>{problems.length}</span>}
+          {t('output.tabProblems')}
+          {problems.length > 0 && <span className={`badge ${errors ? 'err' : 'warn'}`}>{problems.length}</span>}
         </button>
         <button role="tab" aria-selected={tab === 'tests'} onClick={() => onTab('tests')}>
-          测试
+          {t('output.tabTests')}
           {tests.length > 0 && (
             <span className={`badge ${failedTests ? 'err' : 'ok'}`}>
               {tests.length - failedTests}/{tests.length}
@@ -41,8 +43,8 @@ export function OutputPanel({ tab, onTab, busy, outcome, error, onReveal, onAskA
 
       {busy && busy !== 'format' && (
         <div className="banner running">
-          <span className="spinner" /> {busy === 'run' ? '正在编译运行…' : '正在编译并判题…'}
-          <span className="muted">（首次编译通常需要几秒）</span>
+          <span className="spinner" /> {t(busy === 'run' ? 'output.running' : 'output.checking')}
+          <span className="muted">{t('output.firstCompile')}</span>
         </div>
       )}
       {!busy && error && (
@@ -54,16 +56,16 @@ export function OutputPanel({ tab, onTab, busy, outcome, error, onReveal, onAskA
         <div className={`banner ${outcome.passed ? 'pass' : 'fail'}`}>
           {outcome.passed ? <IconCircleCheck /> : <IconX />}
           <span className="banner-text">
-            {outcome.kind === 'check' && outcome.passed ? `通过！${outcome.summary}` : outcome.summary}
+            {outcome.kind === 'check' && outcome.passed ? t('output.passed', { summary: outcome.summary }) : outcome.summary}
           </span>
           {outcome.passed && outcome.kind === 'check' && onNext && (
             <button className="btn primary small" onClick={onNext}>
-              下一关 →
+              {t('output.next')}
             </button>
           )}
           {!outcome.passed && onAskAi && (
             <button className="btn small" onClick={onAskAi}>
-              <IconSparkle /> 问问 AI 助教
+              <IconSparkle /> {t('output.askAi')}
             </button>
           )}
         </div>
@@ -73,13 +75,13 @@ export function OutputPanel({ tab, onTab, busy, outcome, error, onReveal, onAskA
         {tab === 'output' && <OutputView outcome={outcome} />}
         {tab === 'problems' &&
           (problems.length === 0 ? (
-            <Empty text="没有发现问题" />
+            <Empty text={t('output.noProblems')} />
           ) : (
             <ul className="problem-list">
               {problems.map((d, i) => (
                 <li key={i}>
                   <button onClick={() => onReveal(d.line, d.col)}>
-                    <span className={`sev ${d.severity}`}>{d.severity === 'error' ? '错误' : '警告'}</span>
+                    <span className={`sev ${d.severity}`}>{t(d.severity === 'error' ? 'output.error' : 'output.warning')}</span>
                     <span className="problem-msg">{d.message}</span>
                     {d.code && (
                       <a
@@ -102,16 +104,16 @@ export function OutputPanel({ tab, onTab, busy, outcome, error, onReveal, onAskA
           ))}
         {tab === 'tests' &&
           (tests.length === 0 ? (
-            <Empty text={outcome?.kind === 'check' ? '这一关不是用测试判题的' : '点「检查」运行测试'} />
+            <Empty text={t(outcome?.kind === 'check' ? 'output.notTestLevel' : 'output.clickCheck')} />
           ) : (
             <ul className="test-list">
-              {tests.map((t) => (
-                <li key={t.name} className={t.status}>
+              {tests.map((x) => (
+                <li key={x.name} className={x.status}>
                   <div className="test-row">
-                    {t.status === 'ok' ? <IconCircleCheck /> : t.status === 'failed' ? <IconX /> : <span>—</span>}
-                    <code>{t.name}</code>
+                    {x.status === 'ok' ? <IconCircleCheck /> : x.status === 'failed' ? <IconX /> : <span>—</span>}
+                    <code>{x.name}</code>
                   </div>
-                  {t.detail && <pre className="test-detail">{t.detail}</pre>}
+                  {x.detail && <pre className="test-detail">{x.detail}</pre>}
                 </li>
               ))}
             </ul>
@@ -123,7 +125,7 @@ export function OutputPanel({ tab, onTab, busy, outcome, error, onReveal, onAskA
 
 function OutputView({ outcome }: { outcome: Outcome | null }) {
   if (!outcome) {
-    return <Empty text="Ctrl/⌘ + Enter 运行，Ctrl/⌘ + Shift + Enter 检查" icon />;
+    return <Empty text={t('output.empty')} icon />;
   }
   const isTestRun = outcome.tests.length > 0;
   return (
@@ -131,15 +133,15 @@ function OutputView({ outcome }: { outcome: Outcome | null }) {
       {outcome.stderr && <pre className="stderr">{outcome.stderr}</pre>}
       {!isTestRun && outcome.stdout && <pre className="stdout">{outcome.stdout}</pre>}
       {isTestRun && <pre className="stdout dim">{outcome.stdout}</pre>}
-      {!outcome.stderr && !outcome.stdout && <pre className="dim">（程序没有任何输出）</pre>}
+      {!outcome.stderr && !outcome.stdout && <pre className="dim">{t('output.noOutput')}</pre>}
       {outcome.expected !== null && (
         <div className="expected">
           <div className="expected-col">
-            <div className="label">你的输出</div>
-            <pre>{outcome.stdout || '（空）'}</pre>
+            <div className="label">{t('output.yours')}</div>
+            <pre>{outcome.stdout || t('output.emptyValue')}</pre>
           </div>
           <div className="expected-col">
-            <div className="label">期望的输出</div>
+            <div className="label">{t('output.expected')}</div>
             <pre>{outcome.expected}</pre>
           </div>
         </div>

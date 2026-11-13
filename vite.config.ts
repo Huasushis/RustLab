@@ -1,6 +1,37 @@
 import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { Readable } from 'node:stream';
+import { defineConfig, type Plugin } from 'vite';
+import { proxyLlm } from './shared/llm-proxy.mjs';
+
+/** 开发服务器上提供与 Cloudflare Pages 相同的 /api/llm 代理 */
+function llmProxy(): Plugin {
+  return {
+    name: 'rustlab-llm-proxy',
+    configureServer(server) {
+      server.middlewares.use('/api/llm/', async (req, res) => {
+        const chunks: Buffer[] = [];
+        for await (const c of req) chunks.push(c as Buffer);
+        const origin = `http://${req.headers.host}`;
+        const headers = new Headers();
+        for (const [k, v] of Object.entries(req.headers)) if (typeof v === 'string') headers.set(k, v);
+        // 开发服务器自己就是同源的，不需要校验来源（Codespaces 等环境的域名各不相同）
+        headers.delete('origin');
+        const request = new Request(origin + '/api/llm' + (req.url ?? ''), {
+          method: req.method,
+          headers,
+          body: req.method === 'POST' ? Buffer.concat(chunks) : undefined,
+        });
+        const segments = (req.url ?? '').split('?')[0].split('/').filter(Boolean).map(decodeURIComponent);
+        const out = await proxyLlm(request, segments, { LLM_PROXY_HOSTS: process.env.LLM_PROXY_HOSTS });
+        res.statusCode = out.status;
+        out.headers.forEach((v, k) => res.setHeader(k, v));
+        if (out.body) Readable.fromWeb(out.body as never).pipe(res);
+        else res.end();
+      });
+    },
+  };
+}
 
 // 开发服务器上也提供与 Cloudflare Pages 函数相同的 /api/rust 转发：
 //   npm run dev        转发到官方 Playground
@@ -10,7 +41,7 @@ const rustTarget = process.env.RUSTLAB_RUNNER ?? 'https://play.rust-lang.org';
 export default defineConfig({
   // 相对路径：同一份构建产物可放在 Cloudflare Pages 根路径，也可放在 GitHub Pages 的子路径下
   base: './',
-  plugins: [react()],
+  plugins: [react(), llmProxy()],
   resolve: {
     alias: {
       // monaco-editor 的 package exports 不暴露 CSS，这里直接指向 ESM 源目录以便按需导入

@@ -9,6 +9,7 @@
 import { createServer } from 'node:http';
 import { CRATES } from './crates.mjs';
 import { compileAndRun, formatCode, prepareCrates, rustcVersion } from './exec.mjs';
+import { envLang, msg, pickLang } from './messages.mjs';
 
 function parseArgs(argv) {
   const opts = {
@@ -27,11 +28,11 @@ function parseArgs(argv) {
     else if (a === '--prepare') opts.prepareOnly = true;
     else if (a === '--no-crates') opts.noCrates = true;
     else if (a === '-h' || a === '--help') {
-      console.log('用法: node runner/server.mjs [--port 7878] [--host 127.0.0.1] [--allow-origin <origin>]... [--no-crates]');
-      console.log('      node runner/server.mjs --prepare    只下载编译预装的第三方库，然后退出（用于构建 Docker 镜像）');
+      console.log('node runner/server.mjs [--port 7878] [--host 127.0.0.1] [--allow-origin <origin>]... [--no-crates]');
+      console.log('node runner/server.mjs --prepare   # download & build the preinstalled crates, then exit (for Docker images)');
       process.exit(0);
     } else {
-      console.error(`未知参数: ${a}`);
+      console.error(`Unknown argument: ${a}`);
       process.exit(1);
     }
   }
@@ -80,7 +81,7 @@ function readBody(req) {
     req.on('data', (c) => {
       size += c.length;
       if (size > MAX_BODY) {
-        reject(new Error('请求体过大'));
+        reject(new Error(msg(envLang, 'tooLarge')));
         req.destroy();
       } else chunks.push(c);
     });
@@ -106,9 +107,10 @@ async function withSlot(fn) {
 const server = createServer(async (req, res) => {
   const origin = req.headers.origin;
   const url = new URL(req.url ?? '/', 'http://localhost');
+  const lang = pickLang(req.headers['accept-language']);
   try {
     if (!originAllowed(origin)) {
-      send(res, 403, { error: `来源 ${origin} 不在允许列表中，请用 --allow-origin ${origin} 重新启动运行器` });
+      send(res, 403, { error: msg(lang, 'forbiddenOrigin', { o: origin }) });
       return;
     }
     if (req.method === 'OPTIONS') {
@@ -123,31 +125,31 @@ const server = createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/execute') {
       // 要求 JSON：浏览器的跨站"简单请求"发不出这个 Content-Type，必须先过预检
       if (!/^application\/json/i.test(req.headers['content-type'] ?? '')) {
-        send(res, 415, { error: 'Content-Type 必须是 application/json' }, origin);
+        send(res, 415, { error: msg(lang, 'needJson') }, origin);
         return;
       }
       const body = JSON.parse(await readBody(req));
       if (typeof body.code !== 'string') {
-        send(res, 400, { error: '缺少 code 字段' }, origin);
+        send(res, 400, { error: msg(lang, 'needCode') }, origin);
         return;
       }
       const edition = ['2015', '2018', '2021', '2024'].includes(body.edition) ? body.edition : '2024';
-      const result = await withSlot(() => compileAndRun({ code: body.code, tests: body.tests === true, edition }));
+      const result = await withSlot(() => compileAndRun({ code: body.code, tests: body.tests === true, edition, lang }));
       send(res, 200, result, origin);
       return;
     }
     if (req.method === 'POST' && url.pathname === '/format') {
       if (!/^application\/json/i.test(req.headers['content-type'] ?? '')) {
-        send(res, 415, { error: 'Content-Type 必须是 application/json' }, origin);
+        send(res, 415, { error: msg(lang, 'needJson') }, origin);
         return;
       }
       const body = JSON.parse(await readBody(req));
       if (typeof body.code !== 'string') {
-        send(res, 400, { error: '缺少 code 字段' }, origin);
+        send(res, 400, { error: msg(lang, 'needCode') }, origin);
         return;
       }
       const edition = ['2015', '2018', '2021', '2024'].includes(body.edition) ? body.edition : '2024';
-      send(res, 200, await formatCode(body.code, edition), origin);
+      send(res, 200, await formatCode(body.code, edition, lang), origin);
       return;
     }
     send(res, 404, { error: 'not found' }, origin);
@@ -158,11 +160,11 @@ const server = createServer(async (req, res) => {
 
 server.listen(opts.port, opts.host, async () => {
   const version = await rustcVersion();
-  console.log(`RustLab 本地运行器已启动: http://${opts.host}:${opts.port}`);
-  console.log(version ? `使用 ${version}` : '⚠ 没有找到 rustc，请先安装 Rust 工具链: https://rustup.rs');
-  console.log(`允许的页面来源: localhost${opts.origins.length ? `, ${opts.origins.join(', ')}` : ''}`);
-  if (opts.origins.includes('*')) console.log('⚠ 已允许任意来源：任何网页都能让本机执行代码，只应在隔离的容器里这样用');
-  console.log('在 RustLab 的「设置 → 运行环境」里选择"自定义运行器"并填入上面的地址即可。');
+  console.log(msg(envLang, 'started', { url: `http://${opts.host}:${opts.port}` }));
+  console.log(version ? msg(envLang, 'using', { v: version }) : msg(envLang, 'rustcMissing'));
+  console.log(msg(envLang, 'origins', { list: ['localhost', ...opts.origins].join(', ') }));
+  if (opts.origins.includes('*')) console.log(msg(envLang, 'anyOrigin'));
+  console.log(msg(envLang, 'howTo'));
   // 后台预先准备第三方库，免得第一次用到 rand 之类的库时要等
   if (!opts.noCrates) prepareCrates(console.log).catch((err) => console.log(`⚠ ${err.message}`));
 });

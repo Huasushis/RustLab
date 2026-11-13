@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { t } from '../i18n/index.ts';
 import { describeLlmError, llmConfigured, streamChat, type ChatMessage } from '../lib/llm.ts';
 import type { Settings } from '../lib/storage.ts';
 import { IconSend, IconSparkle, IconStop, IconTrash } from './Icons.tsx';
@@ -17,12 +18,7 @@ interface Props {
   contextLabel: string;
 }
 
-const QUICK = [
-  '我卡住了，给我一点思路（先别给完整答案）',
-  '帮我解释一下最近这次的报错',
-  '我的代码哪里可以写得更地道？',
-  '这一关的知识点，用 C++ / Python 类比讲一下',
-];
+const QUICK = ['chat.quick1', 'chat.quick2', 'chat.quick3', 'chat.quick4'] as const;
 
 export function ChatPanel(props: Props) {
   const { settings, messages, onMessages } = props;
@@ -81,20 +77,14 @@ export function ChatPanel(props: Props) {
     return (
       <div className="chat">
         <div className="panel-header">
-          <span>AI 助教</span>
+          <span>{t('app.aiTutor')}</span>
         </div>
         <div className="chat-setup">
           <IconSparkle className="big" />
-          <p>
-            AI 助教是<strong>可选</strong>功能：填入你自己的 API Key 后，它能看到当前关卡和你的代码，
-            帮你解释编译错误、给出思路。
-          </p>
-          <p className="muted">
-            支持 Claude，以及 DeepSeek、通义千问、智谱、Kimi、OpenRouter、Gemini、本地 Ollama 等任何 OpenAI
-            兼容接口。Key 只保存在你的浏览器里，请求直接从浏览器发给模型服务商。
-          </p>
+          <p dangerouslySetInnerHTML={{ __html: t('chat.setupLead') }} />
+          <p className="muted">{t('chat.setupNote')}</p>
           <button className="btn primary" onClick={props.onOpenSettings}>
-            去设置
+            {t('chat.goSettings')}
           </button>
         </div>
       </div>
@@ -104,13 +94,13 @@ export function ChatPanel(props: Props) {
   return (
     <div className="chat">
       <div className="panel-header">
-        <span>AI 助教</span>
+        <span>{t('app.aiTutor')}</span>
         <span className="muted chat-model" title={settings.llm.model}>
           {settings.llm.model}
         </span>
         <button
           className="icon-btn"
-          title="清空对话"
+          title={t('chat.clear')}
           onClick={() => {
             abort.current?.abort();
             onMessages([]);
@@ -120,13 +110,13 @@ export function ChatPanel(props: Props) {
           <IconTrash />
         </button>
       </div>
-      <div className="chat-context muted">上下文：{props.contextLabel}</div>
+      <div className="chat-context muted">{t('chat.context', { label: props.contextLabel })}</div>
       <div className="chat-list" ref={list}>
         {messages.length === 0 && (
           <div className="chat-quick">
             {QUICK.map((q) => (
-              <button key={q} className="btn ghost small" onClick={() => void send(q)}>
-                {q}
+              <button key={q} className="btn ghost small" onClick={() => void send(t(q))}>
+                {t(q)}
               </button>
             ))}
           </div>
@@ -138,7 +128,7 @@ export function ChatPanel(props: Props) {
                 <Markdown source={m.content} />
               ) : (
                 <div className="thinking">
-                  <span className="spinner" /> 思考中…
+                  <span className="spinner" /> {t('chat.thinking')}
                 </div>
               )
             ) : (
@@ -157,7 +147,7 @@ export function ChatPanel(props: Props) {
       >
         <textarea
           value={input}
-          placeholder="问点什么…（Enter 发送，Shift+Enter 换行）"
+          placeholder={t('chat.placeholder')}
           rows={3}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
@@ -168,11 +158,11 @@ export function ChatPanel(props: Props) {
           }}
         />
         {streaming ? (
-          <button type="button" className="icon-btn send" title="停止" onClick={() => abort.current?.abort()}>
+          <button type="button" className="icon-btn send" title={t('chat.stop')} onClick={() => abort.current?.abort()}>
             <IconStop />
           </button>
         ) : (
-          <button type="submit" className="icon-btn send" title="发送" disabled={!input.trim()}>
+          <button type="submit" className="icon-btn send" title={t('chat.send')} disabled={!input.trim()}>
             <IconSend />
           </button>
         )}

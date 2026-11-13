@@ -1,4 +1,5 @@
 // 判题逻辑与编译器输出解析。纯函数、无浏览器依赖：前端与 scripts/verify-content.ts 共用。
+import { t } from '../i18n/index.ts';
 import type { Level } from './parser.ts';
 
 export const RUST_EDITION = '2024';
@@ -163,7 +164,7 @@ export async function runCode(code: string, exec: Executor): Promise<Outcome> {
   return {
     kind: 'run',
     passed: res.success,
-    summary: res.success ? '运行完成' : stderr.includes('panicked at') ? '程序 panic 了' : '编译失败',
+    summary: res.success ? t('check.runDone') : stderr.includes('panicked at') ? t('check.panic') : t('check.compileFailed'),
     stdout: res.stdout,
     stderr,
     tests: [],
@@ -180,7 +181,7 @@ export async function checkLevel(level: Level, code: string, exec: Executor): Pr
     // 关键字（如 for）按完整单词匹配，免得 format! 被误判；其它片段（如 .clone()）按子串匹配
     const hit = /^\w+$/.test(f) ? new RegExp(`\\b${f}\\b`).test(stripped) : stripped.includes(f);
     if (hit) {
-      return { ...base, passed: false, summary: `本关的限制：不能使用 ${f}，换个思路试试` };
+      return { ...base, passed: false, summary: t('check.forbidden', { f }) };
     }
   }
 
@@ -197,16 +198,16 @@ export async function checkLevel(level: Level, code: string, exec: Executor): Pr
     const need = Math.max(1, level.minTests);
     let passed = res.success && failed === 0 && ok >= need;
     let summary: string;
-    if (tests.length === 0 && !res.success) summary = '编译失败，先看看编译器的报错';
-    else if (failed > 0) summary = `${tests.length} 个测试中有 ${failed} 个未通过`;
+    if (tests.length === 0 && !res.success) summary = t('check.compileFailedHint');
+    else if (failed > 0) summary = t('check.testsFailed', { total: tests.length, failed });
     else if (level.minTests > 0 && own < level.minTests) {
       passed = false;
-      summary = `本关要求你自己写至少 ${level.minTests} 个通过的测试，目前只有 ${own} 个`;
+      summary = t('check.needOwnTests', { need: level.minTests, own });
     } else if (ok < need) {
       passed = false;
-      summary = '没有运行任何测试';
-    } else if (!res.success) summary = '测试进程异常退出';
-    else summary = `全部 ${ok} 个测试通过`;
+      summary = t('check.noTests');
+    } else if (!res.success) summary = t('check.testCrash');
+    else summary = t('check.allTestsPassed', { n: ok });
     return {
       ...base,
       passed,
@@ -225,7 +226,7 @@ export async function checkLevel(level: Level, code: string, exec: Executor): Pr
     return {
       ...base,
       passed: false,
-      summary: stderr.includes('panicked at') ? '程序 panic 了' : '编译失败，先看看编译器的报错',
+      summary: stderr.includes('panicked at') ? t('check.panic') : t('check.compileFailedHint'),
       stdout: res.stdout,
       stderr,
       diagnostics,
@@ -235,12 +236,12 @@ export async function checkLevel(level: Level, code: string, exec: Executor): Pr
     return {
       ...base,
       passed: false,
-      summary: '程序能运行，但输出和期望的不一样',
+      summary: t('check.wrongOutput'),
       stdout: res.stdout,
       stderr,
       diagnostics,
       expected: level.expect,
     };
   }
-  return { ...base, passed: true, summary: '编译通过，输出正确', stdout: res.stdout, stderr, diagnostics };
+  return { ...base, passed: true, summary: t('check.outputOk'), stdout: res.stdout, stderr, diagnostics };
 }

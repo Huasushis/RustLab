@@ -1,10 +1,10 @@
-import { chapterOf, levelNumber, neighbours } from '../content.ts';
-import type { Level } from '../lib/parser.ts';
+import { chapterOf, levelNumber, neighbours, type LocalizedLevel } from '../content.ts';
+import { t } from '../i18n/index.ts';
 import { IconArrowLeft, IconArrowRight, IconBulb, IconCircleCheck, IconEye } from './Icons.tsx';
 import { Markdown } from './Markdown.tsx';
 
 interface Props {
-  level: Level;
+  level: LocalizedLevel;
   completed: boolean;
   hintsShown: number;
   onShowHint(): void;
@@ -15,13 +15,13 @@ interface Props {
 export function LessonPane({ level, completed, hintsShown, onShowHint, onShowSolution, onNavigate }: Props) {
   const ch = chapterOf(level);
   const { prev, next } = neighbours(level.id);
-  const modeLabel = level.mode === 'test' ? '测试判题' : level.expect !== null ? '比对输出' : '编译运行';
+  const modeLabel = t(level.mode === 'test' ? 'lesson.modeTest' : level.expect !== null ? 'lesson.modeExpect' : 'lesson.modeRun');
 
   return (
     <article className="lesson" key={level.id}>
       <header className="lesson-head">
         <div className="lesson-crumb">
-          第 {ch.index + 1} 章 · {ch.title}
+          {t('lesson.chapter', { n: ch.index + 1, title: ch.title })}
         </div>
         <h1>
           <span className="lesson-no">{levelNumber(level)}</span> {level.title}
@@ -29,27 +29,28 @@ export function LessonPane({ level, completed, hintsShown, onShowHint, onShowSol
         <div className="lesson-tags">
           <span className="tag">{modeLabel}</span>
           {level.forbid.length > 0 && (
-            <span className="tag warn" title="判题时会检查代码中是否出现这些写法（注释除外）">
-              禁用：{level.forbid.join('  ')}
+            <span className="tag warn" title={t('lesson.forbidTitle')}>
+              {t('lesson.forbid', { list: level.forbid.join('  ') })}
             </span>
           )}
-          {level.minTests > 0 && <span className="tag">至少写 {level.minTests} 个测试</span>}
-          {level.crates.length > 0 && <span className="tag crate">第三方库：{level.crates.join(', ')}</span>}
+          {level.minTests > 0 && <span className="tag">{t('lesson.minTests', { n: level.minTests })}</span>}
+          {level.crates.length > 0 && <span className="tag crate">{t('lesson.crates', { list: level.crates.join(', ') })}</span>}
           {completed && (
             <span className="tag ok">
-              <IconCircleCheck /> 已通过
+              <IconCircleCheck /> {t('lesson.passed')}
             </span>
           )}
         </div>
       </header>
 
+      {level.untranslated && <p className="untranslated">{t('lesson.untranslated')}</p>}
       <Markdown source={level.lesson} className="lesson-body" />
 
       <section className="hints">
         {level.hints.slice(0, hintsShown).map((h, i) => (
           <div className="hint" key={i}>
             <div className="hint-title">
-              <IconBulb /> 提示 {i + 1}
+              <IconBulb /> {t('lesson.hint', { n: i + 1 })}
             </div>
             <Markdown source={h} />
           </div>
@@ -57,14 +58,14 @@ export function LessonPane({ level, completed, hintsShown, onShowHint, onShowSol
         <div className="hint-actions">
           {hintsShown < level.hints.length && (
             <button className="btn" onClick={onShowHint}>
-              <IconBulb /> {hintsShown === 0 ? '给我一点提示' : '再来一条提示'}
+              <IconBulb /> {t(hintsShown === 0 ? 'lesson.firstHint' : 'lesson.moreHint')}
               <span className="muted">
-                （{hintsShown}/{level.hints.length}）
+                ({hintsShown}/{level.hints.length})
               </span>
             </button>
           )}
           <button className="btn ghost" onClick={onShowSolution}>
-            <IconEye /> 对比参考答案
+            <IconEye /> {t('lesson.compare')}
           </button>
         </div>
       </section>
@@ -91,19 +92,10 @@ export function PlaygroundIntro() {
   return (
     <article className="lesson">
       <header className="lesson-head">
-        <div className="lesson-crumb">沙盒</div>
-        <h1>自由练习区</h1>
+        <div className="lesson-crumb">{t('app.sandbox')}</div>
+        <h1>{t('app.playground')}</h1>
       </header>
-      <Markdown
-        className="lesson-body"
-        source={`这里没有任务也没有判题，想试什么就写什么。代码会自动保存在浏览器里。
-
-- **Ctrl/⌘ + Enter**：运行
-- **Shift + Alt + F** 或 **Ctrl/⌘ + S**：用 rustfmt 格式化
-- 只能使用标准库（官方 Playground 还额外提供了最常用的 100 个第三方 crate，例如 \`rand\`、\`regex\`、\`serde\`，选择官方 Playground 作为运行环境时可以直接 \`use\`）
-
-想要更完整的开发体验（rust-analyzer 补全、调试器、cargo）？看看项目 README 里的「本地 / 容器 / Codespaces」一节，同样的关卡可以导出成 cargo 项目，在真正的 VS Code 里做。`}
-      />
+      <Markdown className="lesson-body" source={t('playground.intro')} />
     </article>
   );
 }

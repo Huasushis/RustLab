@@ -1,6 +1,17 @@
 // Claude（Anthropic 官方 SDK）。由 llm.ts 按需动态加载。
 import Anthropic from '@anthropic-ai/sdk';
+import { t } from '../i18n/index.ts';
 import type { ChatMessage, StreamHandlers } from './llm.ts';
+
+function client(apiKey: string, baseURL: string): Anthropic {
+  return new Anthropic({
+    apiKey,
+    baseURL,
+    // Key 由学习者自己填写、只保存在自己的浏览器里，所以允许浏览器直连
+    dangerouslyAllowBrowser: true,
+    maxRetries: 1,
+  });
+}
 
 export async function streamAnthropic(
   apiKey: string,
@@ -10,15 +21,8 @@ export async function streamAnthropic(
   messages: ChatMessage[],
   h: StreamHandlers,
 ): Promise<void> {
-  const client = new Anthropic({
-    apiKey,
-    baseURL,
-    // Key 由学习者自己填写、只保存在自己的浏览器里，所以允许浏览器直连
-    dangerouslyAllowBrowser: true,
-    maxRetries: 1,
-  });
   try {
-    const stream = client.beta.messages.stream(
+    const stream = client(apiKey, baseURL).beta.messages.stream(
       {
         model,
         max_tokens: 16000,
@@ -33,23 +37,31 @@ export async function streamAnthropic(
     stream.on('text', (delta) => h.onText(delta));
     const final = await stream.finalMessage();
     if (final.stop_reason === 'refusal') {
-      h.onText('\n\n> 模型拒绝回答了这个请求，换个问法试试。');
+      h.onText(`\n\n> ${t('llm.refusal')}`);
     } else if (final.stop_reason === 'max_tokens') {
-      h.onText('\n\n> （回答达到长度上限，被截断了）');
+      h.onText(`\n\n> ${t('llm.truncated')}`);
     }
   } catch (err) {
     throw new Error(describe(err), { cause: err });
   }
 }
 
-function describe(err: unknown): string {
-  if (err instanceof Anthropic.AuthenticationError) return 'API Key 无效，请到「设置」里检查。';
-  if (err instanceof Anthropic.PermissionDeniedError) return '这个 API Key 没有调用该模型的权限。';
-  if (err instanceof Anthropic.NotFoundError) return '找不到这个模型，请检查模型名。';
-  if (err instanceof Anthropic.RateLimitError) return '请求太频繁或额度不足，请稍后再试。';
-  if (err instanceof Anthropic.APIConnectionError) {
-    return '连接不上模型服务，请检查网络或 Base URL；也可以试试「通过本站代理」。';
+export async function listAnthropicModels(apiKey: string, baseURL: string): Promise<string[]> {
+  try {
+    const ids: string[] = [];
+    for await (const m of client(apiKey, baseURL).models.list()) ids.push(m.id);
+    return ids;
+  } catch (err) {
+    throw new Error(describe(err), { cause: err });
   }
-  if (err instanceof Anthropic.APIError) return `模型服务返回错误：${err.message}`;
+}
+
+function describe(err: unknown): string {
+  if (err instanceof Anthropic.AuthenticationError) return t('llm.authError');
+  if (err instanceof Anthropic.PermissionDeniedError) return t('llm.permissionError');
+  if (err instanceof Anthropic.NotFoundError) return t('llm.notFound');
+  if (err instanceof Anthropic.RateLimitError) return t('llm.rateLimit');
+  if (err instanceof Anthropic.APIConnectionError) return t('llm.connection');
+  if (err instanceof Anthropic.APIError) return t('llm.apiError', { message: err.message });
   return err instanceof Error ? err.message : String(err);
 }

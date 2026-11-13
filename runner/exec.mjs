@@ -6,6 +6,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { CRATES, cratesUsedBy, dependenciesToml } from './crates.mjs';
+import { envLang, msg } from './messages.mjs';
 
 const MAX_OUTPUT = 256 * 1024;
 
@@ -76,13 +77,13 @@ async function doPrepare(log) {
   } catch {
     /* 没有缓存 */
   }
-  log(`正在准备第三方库（${Object.keys(CRATES).join(', ')}），首次需要下载编译，请稍候…`);
+  log(msg(envLang, 'preparing', { list: Object.keys(CRATES).join(', ') }));
   await mkdir(join(CRATES_DIR, 'src'), { recursive: true });
   await writeFile(join(CRATES_DIR, 'Cargo.toml'), MANIFEST);
   await writeFile(join(CRATES_DIR, 'src', 'main.rs'), 'fn main() {}\n');
   const res = await run('cargo', ['build', '--message-format=json'], { cwd: CRATES_DIR, timeoutMs: 20 * 60_000 });
-  if (res.spawnError) throw new Error('没有找到 cargo，无法使用第三方库（请安装 Rust 工具链：https://rustup.rs）');
-  if (res.code !== 0) throw new Error(`编译第三方库失败：\n${res.stderr.slice(-3000)}`);
+  if (res.spawnError) throw new Error(msg(envLang, 'noCargo'));
+  if (res.code !== 0) throw new Error(msg(envLang, 'cratesFailed', { err: res.stderr.slice(-3000) }));
 
   // 不同版本的 cargo 产物目录布局不同（旧版集中在 target/debug/deps，新版每个库一个目录），
   // 所以从 cargo 的 JSON 输出里收集每个产物（包括间接依赖和过程宏）实际所在的目录
@@ -98,21 +99,22 @@ async function doPrepare(log) {
     if (name in CRATES && rlib) externs[name] = rlib;
   }
   const missing = Object.keys(CRATES).filter((n) => !externs[n]);
-  if (missing.length) throw new Error(`编译第三方库后没有找到：${missing.join(', ')}`);
+  if (missing.length) throw new Error(msg(envLang, 'cratesMissing', { list: missing.join(', ') }));
   const result = { libDirs: [...libDirs], externs };
   await writeFile(cacheFile, JSON.stringify({ manifest: MANIFEST, ...result }, null, 2));
-  log('第三方库已就绪。');
+  log(msg(envLang, 'ready'));
   return result;
 }
 
 /**
- * @param {{ code: string, tests?: boolean, edition?: string, compileTimeoutMs?: number, runTimeoutMs?: number }} req
+ * @param {{ code: string, tests?: boolean, edition?: string, lang?: 'zh' | 'en', compileTimeoutMs?: number, runTimeoutMs?: number }} req
  * @returns {Promise<{ success: boolean, stdout: string, stderr: string, exitDetail: string }>}
  */
 export async function compileAndRun({
   code,
   tests = false,
   edition = '2024',
+  lang = envLang,
   compileTimeoutMs = 60_000,
   runTimeoutMs = 10_000,
 }) {
@@ -141,12 +143,12 @@ export async function compileAndRun({
       return {
         success: false,
         stdout: '',
-        stderr: `无法启动 rustc：${compile.stderr}\n请先安装 Rust 工具链（https://rustup.rs）。`,
+        stderr: msg(lang, 'noRustc', { err: compile.stderr }),
         exitDetail: 'rustc not found',
       };
     }
     if (compile.timedOut) {
-      return { success: false, stdout: '', stderr: `${compile.stderr}\n编译超时。`, exitDetail: 'compile timeout' };
+      return { success: false, stdout: '', stderr: `${compile.stderr}\n${msg(lang, 'compileTimeout')}`, exitDetail: 'compile timeout' };
     }
     if (compile.code !== 0) {
       return { success: false, stdout: '', stderr: compile.stderr, exitDetail: `rustc exited with ${compile.code}` };
@@ -154,7 +156,7 @@ export async function compileAndRun({
 
     const exec = await run(bin, [], { cwd: dir, timeoutMs: runTimeoutMs });
     let stderr = compile.stderr + exec.stderr;
-    if (exec.timedOut) stderr += `\n运行超过 ${runTimeoutMs / 1000} 秒，已被终止（是不是写了死循环？）\n`;
+    if (exec.timedOut) stderr += `\n${msg(lang, 'runTimeout', { s: runTimeoutMs / 1000 })}\n`;
     return {
       success: exec.code === 0 && !exec.timedOut,
       stdout: exec.stdout,
@@ -172,14 +174,14 @@ export async function rustcVersion() {
 }
 
 /** 用 rustfmt 格式化代码；本机没有 rustfmt 时返回失败 */
-export async function formatCode(code, edition = '2024') {
+export async function formatCode(code, edition = '2024', lang = envLang) {
   const res = await run('rustfmt', ['--edition', edition, '--color', 'never'], {
     cwd: tmpdir(),
     timeoutMs: 15_000,
     input: code,
   });
   if (res.spawnError) {
-    return { success: false, code: '', stdout: '', stderr: '本机没有找到 rustfmt（rustup component add rustfmt）' };
+    return { success: false, code: '', stdout: '', stderr: msg(lang, 'noRustfmt') };
   }
   return { success: res.code === 0, code: res.code === 0 ? res.stdout : '', stdout: '', stderr: res.stderr };
 }

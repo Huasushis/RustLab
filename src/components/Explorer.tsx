@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { chapters } from '../content.ts';
+import { getChapters } from '../content.ts';
+import { t } from '../i18n/index.ts';
 import type { Progress } from '../lib/storage.ts';
 import { IconBeaker, IconChevron, IconCircle, IconCircleCheck } from './Icons.tsx';
 
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function Explorer({ currentId, progress, onOpen, onPlayground, playgroundActive }: Props) {
+  const chapters = getChapters();
   const currentChapter = currentId?.split('/')[0];
   const [open, setOpen] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(chapters.map((c) => [c.dir, c.dir === currentChapter || c.index === 0])),
@@ -22,7 +24,7 @@ export function Explorer({ currentId, progress, onOpen, onPlayground, playground
   return (
     <div className="explorer">
       <div className="panel-header">
-        <span>关卡</span>
+        <span>{t('explorer.title')}</span>
         <span className="muted">
           {done}/{total}
         </span>
@@ -32,7 +34,7 @@ export function Explorer({ currentId, progress, onOpen, onPlayground, playground
       </div>
       <button className={`tree-item playground-entry ${playgroundActive ? 'active' : ''}`} onClick={onPlayground}>
         <IconBeaker />
-        <span>自由练习区</span>
+        <span>{t('app.playground')}</span>
       </button>
       <div className="tree">
         {chapters.map((c) => {
