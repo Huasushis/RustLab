@@ -34,6 +34,7 @@ export function LessonPane({ level, completed, hintsShown, onShowHint, onShowSol
             </span>
           )}
           {level.minTests > 0 && <span className="tag">至少写 {level.minTests} 个测试</span>}
+          {level.crates.length > 0 && <span className="tag crate">第三方库：{level.crates.join(', ')}</span>}
           {completed && (
             <span className="tag ok">
               <IconCircleCheck /> 已通过

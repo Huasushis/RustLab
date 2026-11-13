@@ -7,6 +7,7 @@
 //   forbid: .clone() | unsafe      （可选：禁止出现的片段，用 | 分隔）
 //   min_tests: 3                   （可选：至少要有多少个通过的测试，用于"自己写测试"的关卡）
 //   check: test                    （可选：没有 :::tests 块但仍想以测试模式判题时使用）
+//   crates: rand, serde            （可选：本关用到的第三方库，仅用于界面展示）
 //   ---
 //   教程正文（Markdown）……
 //
@@ -46,6 +47,7 @@ export interface Level {
   expect: string | null;
   forbid: string[];
   minTests: number;
+  crates: string[];
   mode: 'test' | 'run';
 }
 
@@ -146,6 +148,7 @@ export function parseLevel(path: string, raw: string): Level {
     expect,
     forbid: meta.forbid ? meta.forbid.split('|').map((s) => s.trim()).filter(Boolean) : [],
     minTests: meta.min_tests ? Number(meta.min_tests) : 0,
+    crates: meta.crates ? meta.crates.split(',').map((s) => s.trim()).filter(Boolean) : [],
     mode,
   };
 }

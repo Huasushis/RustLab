@@ -607,6 +607,12 @@ textarea {
   font-family: var(--font-mono);
 }
 
+.tag.crate {
+  background: var(--info-soft);
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
 .tag.ok {
   background: var(--ok-soft);
   color: var(--ok);

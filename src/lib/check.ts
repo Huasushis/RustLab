@@ -177,7 +177,9 @@ export async function checkLevel(level: Level, code: string, exec: Executor): Pr
   const base = { kind: 'check' as const, stdout: '', stderr: '', tests: [], diagnostics: [], expected: null };
   const stripped = stripComments(code);
   for (const f of level.forbid) {
-    if (stripped.includes(f)) {
+    // 关键字（如 for）按完整单词匹配，免得 format! 被误判；其它片段（如 .clone()）按子串匹配
+    const hit = /^\w+$/.test(f) ? new RegExp(`\\b${f}\\b`).test(stripped) : stripped.includes(f);
+    if (hit) {
       return { ...base, passed: false, summary: `本关的限制：不能使用 ${f}，换个思路试试` };
     }
   }

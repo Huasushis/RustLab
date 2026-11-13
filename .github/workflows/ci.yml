@@ -15,6 +15,13 @@ jobs:
           node-version: 22
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
+      - name: 缓存预编译的第三方库
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cache/rustlab
+          key: crates-${{ hashFiles('runner/crates.mjs') }}
       - run: npm ci
       - name: 类型检查与构建
         run: npm run build

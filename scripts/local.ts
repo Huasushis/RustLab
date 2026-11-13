@@ -12,6 +12,7 @@ import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { dependenciesToml } from '../runner/crates.mjs';
 import { compileAndRun } from '../runner/exec.mjs';
 import { checkLevel, RUST_EDITION, type Executor, type Outcome } from '../src/lib/check.ts';
 import { parseLevel, type ChapterMeta, type Level } from '../src/lib/parser.ts';
@@ -77,7 +78,7 @@ async function cmdExport(levels: Level[], chapters: ChapterMeta[]) {
     join(ws, 'Cargo.toml'),
     `# 由 npm run local -- export 生成。每一关是一个 bin，rust-analyzer 可以直接识别。\n` +
       `[package]\nname = "rustlab-exercises"\nversion = "0.1.0"\nedition = "${RUST_EDITION}"\npublish = false\n\n` +
-      `[lints.rust]\ndead_code = "allow"\nunused_variables = "allow"\n\n${bins.join('\n')}`,
+      `${dependenciesToml()}\n[lints.rust]\ndead_code = "allow"\nunused_variables = "allow"\n\n${bins.join('\n')}`,
   );
   await writeFile(
     join(ws, 'README.md'),

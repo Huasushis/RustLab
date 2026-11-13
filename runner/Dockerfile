@@ -12,9 +12,12 @@ RUN apt-get update \
  && useradd --create-home runner
 
 WORKDIR /app
-COPY exec.mjs server.mjs ./
+COPY crates.mjs exec.mjs server.mjs ./
 
 USER runner
+ENV CARGO_HOME=/home/runner/.cargo
+# 构建镜像时就把预装的第三方库下载编译好，容器启动后可以离线使用
+RUN node server.mjs --prepare
 ENV HOST=0.0.0.0 PORT=7878
 EXPOSE 7878
 CMD ["node", "server.mjs"]
