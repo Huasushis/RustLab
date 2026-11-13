@@ -2,6 +2,8 @@
 import type { Level } from './parser.ts';
 
 export const RUST_EDITION = '2024';
+/** 关卡里隐藏判题测试所在的模块名（用于和学习者自己写的测试区分开） */
+export const HIDDEN_TEST_MODULE = 'rustlab_checks';
 
 export interface ExecRequest {
   code: string;
@@ -188,14 +190,19 @@ export async function checkLevel(level: Level, code: string, exec: Executor): Pr
     const tests = parseTests(res.stdout);
     const failed = tests.filter((t) => t.status === 'failed').length;
     const ok = tests.filter((t) => t.status === 'ok').length;
+    // min_tests 只统计学习者自己写的测试：隐藏的判题测试放在 rustlab_checks 模块里
+    const own = tests.filter((t) => t.status === 'ok' && !t.name.startsWith(`${HIDDEN_TEST_MODULE}::`)).length;
     const need = Math.max(1, level.minTests);
     let passed = res.success && failed === 0 && ok >= need;
     let summary: string;
     if (tests.length === 0 && !res.success) summary = '编译失败，先看看「问题」面板里的报错';
     else if (failed > 0) summary = `${tests.length} 个测试中有 ${failed} 个未通过`;
-    else if (ok < need) {
+    else if (level.minTests > 0 && own < level.minTests) {
       passed = false;
-      summary = `本关要求至少 ${need} 个通过的测试，目前只有 ${ok} 个`;
+      summary = `本关要求你自己写至少 ${level.minTests} 个通过的测试，目前只有 ${own} 个`;
+    } else if (ok < need) {
+      passed = false;
+      summary = '没有运行任何测试';
     } else if (!res.success) summary = '测试进程异常退出';
     else summary = `全部 ${ok} 个测试通过`;
     return {
