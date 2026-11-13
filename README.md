@@ -1,14 +1,17 @@
 # RustLab · Rust 闯关实验室
 
+[English](README.en.md) · 简体中文
+
 面向**已经会 C++ 或 Python** 的人的 Rust 入门教程：边读边写，浏览器里编辑、运行、自动判题，像 LabEx 一样一关一关往下走。
 
 ![RustLab 界面](docs/screenshot.png)
 
-- **12 章 43 关**，从变量一路到所有权、trait、生命周期、迭代器、智能指针、并发，最后是三个综合挑战（词频统计、迷你银行、表达式计算器）
+- **13 章 49 关**，从变量一路到所有权、trait、生命周期、迭代器、智能指针、Cargo 与常用库（rand、serde、regex、thiserror / anyhow、clap、itertools）、并发，最后是三个综合挑战（词频统计、迷你银行、表达式计算器）
+- **中英双语**：界面和全部关卡都有简体中文和英文版本，可以随时切换；默认跟随浏览器语言
 - 讲解只讲 **「Rust 和你熟悉的语言哪里不一样」**，处处拿 C++ / Python 做对比
 - **类 VS Code 的界面**：Monaco 编辑器（VS Code 同款内核）、编译错误直接画波浪线、问题 / 输出 / 测试面板、rustfmt 格式化、参考答案 diff 对比
 - **纯静态网站**，可以免费部署到 Cloudflare Pages / GitHub Pages，不需要任何服务器
-- **可选的 AI 助教**：填自己的 API Key，它能看到当前关卡和你的代码，帮你解释报错、给思路（支持 Claude、DeepSeek、通义千问、智谱、Kimi、OpenRouter、Gemini、本地 Ollama 等）
+- **可选的 AI 助教**：填自己的 API Key，它能看到当前关卡和你的代码，帮你解释报错、给思路（支持 Claude、DeepSeek、通义千问、智谱、Kimi、OpenRouter、Gemini、本地 Ollama，以及任何自定义 Base URL 的 OpenAI 兼容接口）
 - **也能在本地 / 容器里做**：同一套关卡可以导出成 cargo 项目，在真正的 VS Code + rust-analyzer 里做，保存即判题（类似 rustlings）
 
 关卡的章节编排参考了 [rustlings](https://github.com/rust-lang/rustlings)、[The Rust Programming Language](https://doc.rust-lang.org/book/) 和 [Rust 语言圣经](https://course.rs/)，内容为原创。
@@ -22,6 +25,8 @@
 | **官方 Playground**（默认） | 浏览器直接请求 [play.rust-lang.org](https://play.rust-lang.org)，它允许跨域访问 | 免费，零配置 |
 | **经本站转发** | 部署在 Cloudflare Pages 时，由 Pages Function 转发到官方 Playground，适合官方地址访问不畅的网络 | Cloudflare 免费额度（每天 10 万次请求） |
 | **自定义运行器** | 用你自己机器 / Docker / Codespaces 里的 `rustc`，见下文 | 免费 |
+
+三种方式都能使用第三方库：官方 Playground 预装了下载量最高的几百个库；自定义运行器预装了第 11 章用到的 rand、serde、serde_json、regex、anyhow、thiserror、itertools、clap、chrono，版本与 Playground 一致（清单在 `runner/crates.mjs`）。
 
 > 官方 Playground 是 Rust 社区提供的公益服务，请合理使用。人多的课堂或培训，建议让学员在本机启动运行器。
 
@@ -54,7 +59,7 @@ npm run build
 npx wrangler pages deploy
 ```
 
-AI 代理默认只转发到常见模型服务商的域名。要增加其它服务商，在 Pages 项目的环境变量里设置 `LLM_PROXY_HOSTS`（逗号分隔的完整列表）。
+AI 代理（`/api/llm/<主机>/<路径>`）可以转发到任何公网域名，包括自建的 OpenAI 兼容网关，但只转发模型接口路径（`…/chat/completions`、`…/messages`、`…/models`），拒绝 IP 地址、localhost 和内网主机名，并且只接受本站页面发来的请求。想改成严格白名单，在 Pages 项目的环境变量里设置 `LLM_PROXY_HOSTS`（逗号分隔的主机名列表）。
 
 ### 其它免费方案
 
@@ -73,7 +78,9 @@ node runner/server.mjs --allow-origin https://你的站点.pages.dev
 ```
 
 然后在网页的「设置 → 运行环境」里选「自定义运行器」，地址填 `http://127.0.0.1:7878`。
-运行器零依赖，只用 Node 和本机的 `rustc` / `rustfmt`。它会执行收到的任意代码，所以默认只监听本机，并且只接受 localhost 和 `--allow-origin` 列出的页面发来的请求。
+运行器零依赖，只用 Node 和本机的 Rust 工具链。它会执行收到的任意代码，所以默认只监听本机，并且只接受 localhost 和 `--allow-origin` 列出的页面发来的请求。
+
+启动时运行器会在后台用 cargo 预编译一次第三方库（首次需要联网，之后缓存在 `~/.cache/rustlab/crates`，可用环境变量 `RUSTLAB_CRATES_DIR` 修改；`--no-crates` 关闭）。报错信息的语言跟随网页设置，控制台日志的语言跟随 `LANG` 环境变量。
 
 ### 方式二：Docker 容器里的运行器
 
@@ -83,7 +90,7 @@ docker run --rm -p 127.0.0.1:7878:7878 --memory 1g --cpus 2 --pids-limit 256 \
   -e ALLOW_ORIGINS=https://你的站点.pages.dev rustlab-runner
 ```
 
-代码在容器里以普通用户身份编译运行，和你的系统隔离。
+代码在容器里以普通用户身份编译运行，和你的系统隔离。构建镜像时会预先下载编译好第三方库，容器启动后无需联网。
 
 ### 方式三：GitHub Codespaces / VS Code Dev Containers
 
@@ -103,11 +110,13 @@ npm run local -- hint  02-ownership/01-move
 npm run local -- list
 ```
 
-`workspace/` 是一个普通的 cargo 项目，rust-analyzer 能完整地提供补全、跳转和类型提示。判题用的是和网页完全相同的逻辑。
+`workspace/` 是一个普通的 cargo 项目（依赖已经写在 `Cargo.toml` 里），rust-analyzer 能完整地提供补全、跳转和类型提示。判题用的是和网页完全相同的逻辑。设置 `RUSTLAB_LANG=en` 可以导出英文版的关卡和提示。
 
 ## AI 助教
 
 在「设置 → AI 助教」里选择服务商、填写模型名和 API Key。
+
+- 选「其它 OpenAI 兼容接口」可以填任意 Base URL（例如自建的 one-api / new-api / LiteLLM 网关或各种中转服务），请求发往 `Base URL + /chat/completions`；点「获取模型列表」会调用 `/models` 列出可用模型
 
 - Key 只保存在浏览器的 localStorage 里，请求从浏览器直接发给服务商
 - 有的服务商不允许浏览器跨域访问，这时勾选「通过本站代理」（需要部署在 Cloudflare Pages 上），请求会经过本站的 Pages Function 转发，函数不记录、不保存任何内容
@@ -121,8 +130,9 @@ npm run local -- list
 ```markdown
 ---
 title: 关卡标题
-forbid: .clone() | unsafe     # 可选：判题时禁止出现的写法（注释除外）
+forbid: .clone() | unsafe     # 可选：判题时禁止出现的写法（注释除外；关键字按整词匹配）
 min_tests: 3                  # 可选：要求学习者自己写至少 N 个通过的测试
+crates: rand, serde           # 可选：本关用到的第三方库（只用于界面展示）
 ---
 讲解正文（Markdown）……
 
@@ -149,7 +159,11 @@ min_tests: 3                  # 可选：要求学习者自己写至少 N 个通
 
 既没有 `tests` 也没有 `expect` 的关卡，只要求能编译并正常退出。如果关卡要求学习者自己写测试，隐藏的判题测试请放在名为 `rustlab_checks` 的模块里，它们不计入 `min_tests`。
 
-改完之后运行校验，它会确认每一关的参考答案能通过、初始代码不能直接通过：
+### 翻译
+
+中文是原文。译文放在原文旁边，文件名加上语言后缀，例如 `01-hello.en.md`；章节标题的译文写在 `chapters.json` 每一项的 `i18n` 字段里。译文必须有 `title`、讲解和与原文数量相同的提示；`exercise` / `tests` / `expect` / `solution` 写了就覆盖原文，没写就沿用原文（代码里有中文注释或中文输出时应该一起翻译）。界面文字在 `src/i18n/zh.ts` 和 `en.ts` 里，英文字典的类型由中文字典推导，漏翻会编译报错。
+
+改完之后运行校验，它会确认每一关（以及每个改动了代码的译文版本）的参考答案能通过、初始代码不能直接通过，并列出缺少的译文：
 
 ```bash
 npm run verify                    # 用本机 rustc，并行校验全部关卡
@@ -166,9 +180,11 @@ src/
   lib/check.ts      判题逻辑（网页、本地 CLI、校验脚本共用）
   lib/runners.ts    运行环境：官方 Playground / 本站转发 / 自定义运行器
   lib/llm.ts        AI 助教：Anthropic SDK 与 OpenAI 兼容接口
+  i18n/             界面文字（zh / en）
   components/       界面（React + Monaco）
 functions/api/      Cloudflare Pages Functions：Playground 转发、AI 代理
-runner/             本地 / 容器运行器（零依赖 Node 服务，兼容 Playground 接口）
+shared/             AI 代理的实现（Pages Function 与开发服务器共用）
+runner/             本地 / 容器运行器（零依赖 Node 服务，兼容 Playground 接口，预装第三方库）
 scripts/            关卡校验、本地做题 CLI、dev:local 启动脚本
 .devcontainer/      Codespaces / Dev Containers 配置
 ```
