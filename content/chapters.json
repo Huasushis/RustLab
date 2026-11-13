@@ -1,15 +1,15 @@
 [
-  {"dir": "01-basics", "title": "起步", "summary": "变量、类型、函数与控制流：把你已有的编程直觉迁移到 Rust"},
-  {"dir": "02-ownership", "title": "所有权与借用", "summary": "Rust 最核心也最独特的部分：没有 GC，也没有悬垂指针"},
-  {"dir": "03-structs-enums", "title": "结构体、枚举与模式匹配", "summary": "用类型为数据建模，用 match 把每种情况都处理到"},
-  {"dir": "04-collections", "title": "常用集合", "summary": "Vec、HashMap 与文本处理"},
-  {"dir": "05-errors", "title": "错误处理", "summary": "没有异常：用 Result 和 ? 把错误写进类型里"},
-  {"dir": "06-generics-traits", "title": "泛型与 Trait", "summary": "零成本抽象：静态分发、动态分发与标准库里的常用 trait"},
-  {"dir": "07-lifetimes", "title": "生命周期", "summary": "告诉编译器引用之间的关系"},
-  {"dir": "08-closures-iterators", "title": "闭包与迭代器", "summary": "函数式风格的 Rust：写起来像 Python，跑起来像手写循环"},
-  {"dir": "09-smart-pointers", "title": "智能指针", "summary": "Box、Rc 与 RefCell：堆分配、共享所有权和内部可变性"},
-  {"dir": "10-modules-tests", "title": "模块与测试", "summary": "组织代码，并且用测试守护它"},
-  {"dir": "11-cargo-crates", "title": "Cargo 与常用库", "summary": "包管理器、crates.io，以及 rand、serde、regex、anyhow、clap、itertools 这些几乎每个项目都会用到的库"},
-  {"dir": "12-concurrency", "title": "无畏并发", "summary": "线程、锁与通道：数据竞争在编译期就被拦下"},
-  {"dir": "13-capstone", "title": "综合挑战", "summary": "把学过的东西拼起来，写几个真正有用的小程序"}
+  {"dir": "01-basics", "title": "起步", "summary": "变量、类型、函数与控制流：把你已有的编程直觉迁移到 Rust", "i18n": {"en": {"title": "Getting Started", "summary": "Variables, types, functions and control flow: carry your existing intuition over to Rust"}}},
+  {"dir": "02-ownership", "title": "所有权与借用", "summary": "Rust 最核心也最独特的部分：没有 GC，也没有悬垂指针", "i18n": {"en": {"title": "Ownership and Borrowing", "summary": "The core of Rust and what makes it unique: no GC, and no dangling pointers"}}},
+  {"dir": "03-structs-enums", "title": "结构体、枚举与模式匹配", "summary": "用类型为数据建模，用 match 把每种情况都处理到", "i18n": {"en": {"title": "Structs, Enums and Pattern Matching", "summary": "Model data with types, and use match to handle every case"}}},
+  {"dir": "04-collections", "title": "常用集合", "summary": "Vec、HashMap 与文本处理", "i18n": {"en": {"title": "Common Collections", "summary": "Vec, HashMap and working with text"}}},
+  {"dir": "05-errors", "title": "错误处理", "summary": "没有异常：用 Result 和 ? 把错误写进类型里", "i18n": {"en": {"title": "Error Handling", "summary": "No exceptions: put errors into the type with Result and ?"}}},
+  {"dir": "06-generics-traits", "title": "泛型与 Trait", "summary": "零成本抽象：静态分发、动态分发与标准库里的常用 trait", "i18n": {"en": {"title": "Generics and Traits", "summary": "Zero-cost abstraction: static dispatch, dynamic dispatch and the standard traits"}}},
+  {"dir": "07-lifetimes", "title": "生命周期", "summary": "告诉编译器引用之间的关系", "i18n": {"en": {"title": "Lifetimes", "summary": "Telling the compiler how references relate to each other"}}},
+  {"dir": "08-closures-iterators", "title": "闭包与迭代器", "summary": "函数式风格的 Rust：写起来像 Python，跑起来像手写循环", "i18n": {"en": {"title": "Closures and Iterators", "summary": "Functional-style Rust: reads like Python, runs like a hand-written loop"}}},
+  {"dir": "09-smart-pointers", "title": "智能指针", "summary": "Box、Rc 与 RefCell：堆分配、共享所有权和内部可变性", "i18n": {"en": {"title": "Smart Pointers", "summary": "Box, Rc and RefCell: heap allocation, shared ownership and interior mutability"}}},
+  {"dir": "10-modules-tests", "title": "模块与测试", "summary": "组织代码，并且用测试守护它", "i18n": {"en": {"title": "Modules and Tests", "summary": "Organize your code and protect it with tests"}}},
+  {"dir": "11-cargo-crates", "title": "Cargo 与常用库", "summary": "包管理器、crates.io，以及 rand、serde、regex、anyhow、clap、itertools 这些几乎每个项目都会用到的库", "i18n": {"en": {"title": "Cargo and Popular Crates", "summary": "The package manager, crates.io, and the crates almost every project uses: rand, serde, regex, anyhow, clap, itertools"}}},
+  {"dir": "12-concurrency", "title": "无畏并发", "summary": "线程、锁与通道：数据竞争在编译期就被拦下", "i18n": {"en": {"title": "Fearless Concurrency", "summary": "Threads, locks and channels: data races are stopped at compile time"}}},
+  {"dir": "13-capstone", "title": "综合挑战", "summary": "把学过的东西拼起来，写几个真正有用的小程序", "i18n": {"en": {"title": "Capstone Challenges", "summary": "Put it all together and build a few genuinely useful little programs"}}}
 ]
