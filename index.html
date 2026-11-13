@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="RustLab：面向有 C++/Python 基础者的 Rust 闯关式在线教程，浏览器内编辑、运行、自动判题。" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>RustLab · Rust 闯关实验室</title>
+    <script>
+      // 在首帧之前应用主题，避免闪烁
+      try {
+        var s = JSON.parse(localStorage.getItem('rustlab:settings') || '{}');
+        var t = s.theme || 'system';
+        if (t === 'system') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        document.documentElement.dataset.theme = t;
+      } catch (e) {
+        document.documentElement.dataset.theme = 'dark';
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
