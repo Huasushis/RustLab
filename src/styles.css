@@ -1309,6 +1309,27 @@ textarea {
   gap: 6px;
 }
 
+.ai-section {
+  scroll-margin-top: 8px;
+  border-radius: var(--radius);
+}
+
+.ai-section.flash {
+  animation: section-flash 1.6s ease;
+}
+
+@keyframes section-flash {
+  0%,
+  40% {
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 6px var(--accent-soft);
+  }
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
 .help.mono {
   font-family: var(--font-mono);
   overflow-wrap: anywhere;

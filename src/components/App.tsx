@@ -152,6 +152,7 @@ export function App() {
   const [diffOpen, setDiffOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<MobileView>('lesson');
+  const [focusAi, setFocusAi] = useState(0);
 
   const editorRef = useRef<EditorHandle>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -404,6 +405,8 @@ export function App() {
       onOpenSettings={() => {
         if (isMobile) setMobileView('menu');
         setSide('settings');
+        // 设置面板打开后滚动到「AI 助教」一节并高亮，免得它藏在面板底部看不见
+        requestAnimationFrame(() => setFocusAi((n) => n + 1));
       }}
       contextLabel={
         level ? t('app.chatContextLevel', { level: `${levelNumber(level)} ${level.title}` }) : t('app.chatContextPlayground')
@@ -415,6 +418,7 @@ export function App() {
     <SettingsPanel
       settings={settings}
       onChange={setSettings}
+      focusAi={focusAi}
       onResetProgress={() => {
         try {
           for (const k of Object.keys(localStorage)) {

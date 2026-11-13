@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getLang, LANGS, t } from '../i18n/index.ts';
 import { describeLlmError, listModels, PRESETS, streamChat } from '../lib/llm.ts';
 import { probeRunner } from '../lib/runners.ts';
@@ -8,6 +8,8 @@ interface Props {
   settings: Settings;
   onChange(s: Settings): void;
   onResetProgress(): void;
+  /** 每次变化时滚动到 AI 助教一节并高亮（来自聊天面板的「去设置」） */
+  focusAi?: number;
 }
 
 type Status = { kind: 'idle' | 'busy' | 'ok' | 'err'; text?: string };
@@ -21,12 +23,25 @@ function StatusLine({ s }: { s: Status }) {
   );
 }
 
-export function SettingsPanel({ settings, onChange, onResetProgress }: Props) {
+export function SettingsPanel({ settings, onChange, onResetProgress, focusAi }: Props) {
   const [runnerStatus, setRunnerStatus] = useState<Status>({ kind: 'idle' });
   const [llmStatus, setLlmStatus] = useState<Status>({ kind: 'idle' });
   const [models, setModels] = useState<string[]>([]);
   const [showKey, setShowKey] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const aiSection = useRef<HTMLElement>(null);
+  const providerSelect = useRef<HTMLSelectElement>(null);
+
+  useEffect(() => {
+    if (!focusAi) return;
+    const el = aiSection.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el.classList.remove('flash');
+    void el.offsetWidth; // 重新触发动画
+    el.classList.add('flash');
+    providerSelect.current?.focus({ preventScroll: true });
+  }, [focusAi]);
   const lang = getLang();
   const llm = settings.llm;
   const set = (patch: Partial<Settings>) => onChange({ ...settings, ...patch });
@@ -155,12 +170,13 @@ export function SettingsPanel({ settings, onChange, onResetProgress }: Props) {
           <StatusLine s={runnerStatus} />
         </section>
 
-        <section>
+        <section ref={aiSection} className="ai-section">
           <h3>{t('settings.ai')}</h3>
           <p className="help">{t('settings.aiHelp')}</p>
           <label className="field">
             <span>{t('settings.provider')}</span>
             <select
+              ref={providerSelect}
               value={llm.provider === 'none' ? 'none' : (preset?.id ?? 'custom')}
               onChange={(e) => {
                 const v = e.target.value;
