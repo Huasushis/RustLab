@@ -25,7 +25,7 @@ impl Iterator for Countdown {
 然后上两关的**所有**方法就都免费得到了，也能直接用在 `for` 循环里：
 
 ```rust
-for i in Countdown { n: 3 } { println!("{i}"); }               // 3 2 1
+for i in (Countdown { n: 3 }) { println!("{i}"); }               // 3 2 1
 let total: u32 = Countdown { n: 4 }.map(|x| x * x).sum();      // 30
 ```
 
