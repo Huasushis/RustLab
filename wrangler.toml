@@ -1,0 +1,4 @@
+# Cloudflare Pages 配置（用 `npx wrangler pages deploy` 部署时使用；通过 Git 集成部署可以忽略）
+name = "rustlab"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-10-01"

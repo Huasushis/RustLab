@@ -7,14 +7,14 @@ import { join } from 'node:path';
 
 const MAX_OUTPUT = 256 * 1024;
 
-function run(cmd, args, { cwd, timeoutMs }) {
+function run(cmd, args, { cwd, timeoutMs, input }) {
   return new Promise((resolve) => {
     let stdout = '';
     let stderr = '';
     let timedOut = false;
     let child;
     try {
-      child = spawn(cmd, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+      child = spawn(cmd, args, { cwd, stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'] });
     } catch (err) {
       resolve({ code: -1, stdout, stderr: String(err), timedOut, spawnError: true });
       return;
@@ -27,6 +27,10 @@ function run(cmd, args, { cwd, timeoutMs }) {
       current.length >= MAX_OUTPUT ? current : (current + chunk.toString('utf8')).slice(0, MAX_OUTPUT);
     child.stdout.on('data', (c) => (stdout = append(stdout, c)));
     child.stderr.on('data', (c) => (stderr = append(stderr, c)));
+    if (input !== undefined) {
+      child.stdin.on('error', () => {}); // 进程没能启动时忽略 EPIPE
+      child.stdin.end(input);
+    }
     child.on('error', (err) => {
       clearTimeout(timer);
       resolve({ code: -1, stdout, stderr: `${stderr}${err.message}\n`, timedOut, spawnError: true });
@@ -92,4 +96,17 @@ export async function compileAndRun({
 export async function rustcVersion() {
   const res = await run('rustc', ['--version'], { cwd: tmpdir(), timeoutMs: 10_000 });
   return res.code === 0 ? res.stdout.trim() : null;
+}
+
+/** 用 rustfmt 格式化代码；本机没有 rustfmt 时返回失败 */
+export async function formatCode(code, edition = '2024') {
+  const res = await run('rustfmt', ['--edition', edition, '--color', 'never'], {
+    cwd: tmpdir(),
+    timeoutMs: 15_000,
+    input: code,
+  });
+  if (res.spawnError) {
+    return { success: false, code: '', stdout: '', stderr: '本机没有找到 rustfmt（rustup component add rustfmt）' };
+  }
+  return { success: res.code === 0, code: res.code === 0 ? res.stdout : '', stdout: '', stderr: res.stderr };
 }

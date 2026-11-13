@@ -7,7 +7,7 @@
 // 安全说明：这个服务会执行收到的任意代码。默认只监听 127.0.0.1，并且只接受来自 localhost 页面
 // 以及 --allow-origin 明确列出的站点的请求，其它网页无法借你的浏览器调用它。
 import { createServer } from 'node:http';
-import { compileAndRun, rustcVersion } from './exec.mjs';
+import { compileAndRun, formatCode, rustcVersion } from './exec.mjs';
 
 function parseArgs(argv) {
   const opts = {
@@ -125,6 +125,20 @@ const server = createServer(async (req, res) => {
       const edition = ['2015', '2018', '2021', '2024'].includes(body.edition) ? body.edition : '2024';
       const result = await withSlot(() => compileAndRun({ code: body.code, tests: body.tests === true, edition }));
       send(res, 200, result, origin);
+      return;
+    }
+    if (req.method === 'POST' && url.pathname === '/format') {
+      if (!/^application\/json/i.test(req.headers['content-type'] ?? '')) {
+        send(res, 415, { error: 'Content-Type 必须是 application/json' }, origin);
+        return;
+      }
+      const body = JSON.parse(await readBody(req));
+      if (typeof body.code !== 'string') {
+        send(res, 400, { error: '缺少 code 字段' }, origin);
+        return;
+      }
+      const edition = ['2015', '2018', '2021', '2024'].includes(body.edition) ? body.edition : '2024';
+      send(res, 200, await formatCode(body.code, edition), origin);
       return;
     }
     send(res, 404, { error: 'not found' }, origin);

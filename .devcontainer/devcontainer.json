@@ -1,0 +1,22 @@
+{
+  // 在 GitHub Codespaces（每月有免费额度）或本地 VS Code 的 Dev Containers 里一键获得完整环境：
+  // VS Code + rust-analyzer + cargo + Node。打开后运行 `npm run dev:local` 即可。
+  "name": "RustLab",
+  "image": "mcr.microsoft.com/devcontainers/rust:1-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" }
+  },
+  "postCreateCommand": "npm ci && npm run local -- export",
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": { "label": "RustLab 网页", "onAutoForward": "openBrowser" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["rust-lang.rust-analyzer", "tamasfe.even-better-toml", "usernamehw.errorlens"],
+      "settings": {
+        "rust-analyzer.check.command": "clippy"
+      }
+    }
+  }
+}

@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "verify": "node scripts/verify-content.ts",
-    "runner": "node runner/server.mjs"
+    "runner": "node runner/server.mjs",
+    "dev:local": "node scripts/dev-local.mjs",
+    "local": "node scripts/local.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
@@ -26,5 +28,9 @@
     "@vitejs/plugin-react": "^6.3.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.8"
-  }
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "license": "MIT"
 }

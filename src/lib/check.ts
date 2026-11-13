@@ -195,7 +195,7 @@ export async function checkLevel(level: Level, code: string, exec: Executor): Pr
     const need = Math.max(1, level.minTests);
     let passed = res.success && failed === 0 && ok >= need;
     let summary: string;
-    if (tests.length === 0 && !res.success) summary = '编译失败，先看看「问题」面板里的报错';
+    if (tests.length === 0 && !res.success) summary = '编译失败，先看看编译器的报错';
     else if (failed > 0) summary = `${tests.length} 个测试中有 ${failed} 个未通过`;
     else if (level.minTests > 0 && own < level.minTests) {
       passed = false;
@@ -223,7 +223,7 @@ export async function checkLevel(level: Level, code: string, exec: Executor): Pr
     return {
       ...base,
       passed: false,
-      summary: stderr.includes('panicked at') ? '程序 panic 了' : '编译失败，先看看「问题」面板里的报错',
+      summary: stderr.includes('panicked at') ? '程序 panic 了' : '编译失败，先看看编译器的报错',
       stdout: res.stdout,
       stderr,
       diagnostics,
